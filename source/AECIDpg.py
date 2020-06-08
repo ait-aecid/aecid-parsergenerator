@@ -250,51 +250,62 @@ with open(PGConfig.parser_file, 'wb') as file:
 
 print('Parser done')
 
-# Use networkx to plot a graphical overview of the tree
-#print('Print tree as network')
+if PGConfig.visualize is True:
+  import networkx as nx
+  from networkx.drawing.nx_agraph import write_dot, graphviz_layout, to_agraph
+  import matplotlib.pyplot as plt
+  #from graphviz import Source
 
-#G = nx.DiGraph()
-#G.add_edges_from(root.getNodeConnections())
+  # Use networkx to plot a graphical overview of the tree
+  print('Print tree as network')
 
-#mappings = root.getNodeMappings()
-#mappings.update({1 : root})
+  G = nx.DiGraph()
+  G.add_edges_from(root.getNodeConnections())
 
-#labels = {}
-#colors = []
-#labelNodes = False
-#for entry in mappings:
-#    if mappings[entry].element == '§':
-#        if labelNodes == True:
-#            labels[entry] = ''
-#        else:
-#            labels[entry] = str(mappings[entry].ID)
+  mappings = root.getNodeMappings()
+  mappings.update({1 : root})
 
-#        specialDatatype = False
-#        for dt in mappings[entry].datatype:
-#            if dt in ['integer', 'float', 'datetime', 'ipaddress', 'base64', 'hex']:
-#                specialDatatype = True
+  labels = {}
+  colors = []
+  labelNodes = True
+  for entry in mappings:
+      if mappings[entry].element == '§':
+          if labelNodes == True:
+              labels[entry] = ''
+          else:
+              labels[entry] = str(mappings[entry].ID)
 
-#        if specialDatatype == True:
-#            colors.append('lightblue')
-#        else:
-#            colors.append('blue')
-#    else:
-#        if labelNodes == True:
-#            labels[entry] = mappings[entry].element
-#        else:
-#            labels[entry] = str(mappings[entry].ID)
+          specialDatatype = False
+          for dt in mappings[entry].datatype:
+              if dt in ['integer', 'float', 'datetime', 'ipaddress', 'base64', 'hex']:
+                  specialDatatype = True
 
-#        if mappings[entry].end == True:
-#            if mappings[entry].isList == True:
-#                colors.append('darkgreen')
-#            else:
-#                colors.append('green')
-#        else:
-#            if mappings[entry].isList == True:
-#                colors.append('darkred')
-#            else:
-#                colors.append('red')
+          if specialDatatype == True:
+              colors.append('lightblue')
+          else:
+              colors.append('blue')
+      else:
+          if labelNodes == True:
+              labels[entry] = mappings[entry].element
+          else:
+              labels[entry] = str(mappings[entry].ID)
 
-#pos = graphviz_layout(G, prog='dot')
-#nx.draw(G, pos=pos, node_color=colors, labels=labels, node_size=30, font_size=2, width=0.3, arrowsize=2, with_labels=True)
-#plt.show()
+          if mappings[entry].end == True:
+              if mappings[entry].isList == True:
+                  colors.append('darkgreen')
+              else:
+                  colors.append('green')
+          else:
+              if mappings[entry].isList == True:
+                  colors.append('darkred')
+              else:
+                  colors.append('red')
+
+  pos = graphviz_layout(G, prog='dot')
+  nx.draw(G, pos=pos, node_color=colors, labels=labels, node_size=30, font_size=2, width=0.3, arrowsize=2, with_labels=True)
+  #A = to_agraph(G)
+  #A.layout('dot')
+  #A.draw(PGConfig.visualization_file)
+  #s = Source.from_file(PGConfig.visualization_file)
+  #s.view()
+  plt.savefig(PGConfig.visualization_file, dpi=1000)
