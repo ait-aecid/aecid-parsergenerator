@@ -1,17 +1,17 @@
-input_file = '/home/aminer/demo/syslog'
-tree_file = '/home/aminer/aecidPG/aecid-parsergenerator/source_smartRefinedTree/data/out/tree.txt'
-parser_file = '/home/aminer/aecidPG/aecid-parsergenerator/source_smartRefinedTree/data/out/GeneratedParserModel.py'
-resultsDir = '/home/aminer/aecidPG/aecid-parsergenerator/source_smartRefinedTree/data/out/result_pg/'
+input_file = 'data/in/audit.log'
+tree_file = 'data/out/tree.txt'
+parser_file = 'data/out/GeneratedParserModel.py'
+templates_file = 'data/out/logTemplates.txt'
 time_stamp_length = -1
-theta1 = 0.01
-theta2 = 0.99
-theta3 = 0.95
+theta1 = 0.1
+theta2 = 0.9
+theta3 = 0.9
 theta4 = 0.0001
 theta5 = 0.0001
 theta6 = 0.001 # Threshold for optional nodes in branches. 
 damping = 0.0
 merge_similarity = 0.7
-delimiters = [' ']
+delimiters = [' ', '=']
 forceBranch = []
 forceVar = []
 mergeSubtreesMinSimilarity = 0.45 # Threshold for the similarity of the subtrees. If the calculated similarity exceeds the threshold, the subtrees are merged

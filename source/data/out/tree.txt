@@ -1,0 +1,129 @@
+root (2998)
+ - type= (2998) - Theta=0.1
+  - PROCTITLE msg= (1299) - Theta=0.1
+   - § (1299) - Theta=0.1
+    -  proctitle= (1299) - Theta=0.1
+     - 2F7573722F7362696E2F61706163686532002D6B007374617274 (1263) - Theta=0.1
+     - § (36) - Theta=0.1
+  - SYSCALL msg= (1302) - Theta=0.1
+   - § (1302) - Theta=0.1
+    -  arch=c000003e syscall= (1302) - Theta=0.1
+     - § (1302) - Theta=0.1
+      -  success= (1302) - Theta=0.1
+       - yes exit= (1249) - Theta=0.1
+        - § (1249) - Theta=0.1
+         -  a0= (1249) - Theta=0.1
+          - § (1249) - Theta=0.1
+           -  a1= (1249) - Theta=0.1
+            - § (1249) - Theta=0.1
+             -  a2= (1249) - Theta=0.1
+              - § (1249) - Theta=0.1
+               -  a3= (1249) - Theta=0.1
+                - § (1249) - Theta=0.1
+                 -  items= (1249) - Theta=0.1
+                  - § (1249) - Theta=0.1
+                   -  ppid= (1249) - Theta=0.1
+                    - § (1249) - Theta=0.1
+                     -  pid= (1249) - Theta=0.1
+                      - § (1249) - Theta=0.1
+                       -  auid= (1249) - Theta=0.1
+                        - § (1249) - Theta=0.1
+                         -  uid= (1249) - Theta=0.1
+                          - § (1249) - Theta=0.1
+                           -  gid= (1249) - Theta=0.1
+                            - § (1249) - Theta=0.1
+                             -  euid= (1249) - Theta=0.1
+                              - § (1249) - Theta=0.1
+                               -  suid= (1249) - Theta=0.1
+                                - § (1249) - Theta=0.1
+                                 -  fsuid= (1249) - Theta=0.1
+                                  - § (1249) - Theta=0.1
+                                   -  egid= (1249) - Theta=0.1
+                                    - § (1249) - Theta=0.1
+                                     -  sgid= (1249) - Theta=0.1
+                                      - § (1249) - Theta=0.1
+                                       -  fsgid= (1249) - Theta=0.1
+                                        - § (1249) - Theta=0.1
+                                         -  tty=(none) ses= (1249) - Theta=0.1
+                                          - § (1249) - Theta=0.1
+                                           -  comm= (1249) - Theta=0.1
+                                            - "apache2" exe="/usr/sbin/apache2" key=(null) (1213) - Theta=0.1
+                                            - § (36) - Theta=0.1
+                                             -  exe= (36) - Theta=0.1
+                                              - "/usr/bin/suricata" (35) - Theta=0.1
+                                               -  key=(null) (35) - Theta=0.1
+                                              - § (1) - Theta=0.1
+                                               -  key=(null) (1) - Theta=0.1
+       - § (53) - Theta=0.1
+        -  exit= (53) - Theta=0.1
+         - § (53) - Theta=0.1
+          -  a0= (53) - Theta=0.1
+           - § (53) - Theta=0.1
+            -  a1= (53) - Theta=0.1
+             - § (53) - Theta=0.1
+              -  a2= (53) - Theta=0.1
+               - § (53) - Theta=0.1
+                -  a3= (53) - Theta=0.1
+                 - § (53) - Theta=0.1
+                  -  items= (53) - Theta=0.1
+                   - § (53) - Theta=0.1
+                    -  ppid= (53) - Theta=0.1
+                     - § (53) - Theta=0.1
+                      -  pid= (53) - Theta=0.1
+                       - § (53) - Theta=0.1
+                        -  auid= (53) - Theta=0.1
+                         - § (53) - Theta=0.1
+                          -  uid= (53) - Theta=0.1
+                           - § (53) - Theta=0.1
+                            -  gid= (53) - Theta=0.1
+                             - § (53) - Theta=0.1
+                              -  euid= (53) - Theta=0.1
+                               - § (53) - Theta=0.1
+                                -  suid= (53) - Theta=0.1
+                                 - § (53) - Theta=0.1
+                                  -  fsuid= (53) - Theta=0.1
+                                   - § (53) - Theta=0.1
+                                    -  egid= (53) - Theta=0.1
+                                     - § (53) - Theta=0.1
+                                      -  sgid= (53) - Theta=0.1
+                                       - § (53) - Theta=0.1
+                                        -  fsgid= (53) - Theta=0.1
+                                         - § (53) - Theta=0.1
+                                          -  tty=(none) ses= (53) - Theta=0.1
+                                           - § (53) - Theta=0.1
+                                            -  comm= (53) - Theta=0.1
+                                             - "apache2" exe="/usr/sbin/apache2" key=(null) (53) - Theta=0.1
+  - PATH msg= (384) - Theta=0.1
+   - § (384) - Theta=0.1
+    -  item= (384) - Theta=0.1
+     - § (384) - Theta=0.1
+      -  name= (384) - Theta=0.1
+       - § (384) - Theta=0.1
+        -   (384) - Theta=0.1
+         - inode= (346) - Theta=0.1
+          - § (346) - Theta=0.1
+           -  dev= (346) - Theta=0.1
+            - fe:01 mode= (339) - Theta=0.1
+             - § (339) - Theta=0.1
+              -  ouid= (339) - Theta=0.1
+               - § (339) - Theta=0.1
+                -  ogid= (339) - Theta=0.1
+                 - § (339) - Theta=0.1
+                  -  rdev=00:00 nametype= (339) - Theta=0.1
+                   - NORMAL (320) - Theta=0.1
+                   - § (19) - Theta=0.1
+            - § (7) - Theta=0.1
+             -  mode= (7) - Theta=0.1
+              - § (7) - Theta=0.1
+               -  ouid= (7) - Theta=0.1
+                - § (7) - Theta=0.1
+                 -  ogid= (7) - Theta=0.1
+                  - § (7) - Theta=0.1
+                   -  rdev=00:00 nametype=NORMAL (7) - Theta=0.1
+         - § (38) - Theta=0.1
+          - =UNKNOWN (38) - Theta=0.1
+  - § (13) - Theta=0.1
+   -  msg= (13) - Theta=0.1
+    - § (13) - Theta=0.1
+     -  saddr= (13) - Theta=0.1
+      - ['01002F7661722F72756E2F6D7973716C642F6D7973716C642E736F636B', '020000350A12FFFE0000000000000000'] (13) - Theta=0.1
