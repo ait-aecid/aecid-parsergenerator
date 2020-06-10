@@ -1,4 +1,4 @@
 class GlobalID:
-    """This class describes a global id1"""
+    """This class describes a global id"""
     def __init__(self):
         self.value = 0
