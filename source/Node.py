@@ -255,7 +255,7 @@ class Node:
             for child in self.children:
                 child.aggregate_sequences(subtree_list)
 
-    # This method returns a dictionary of all nodes, referenced by their IDs
+    # This method returns a alphabet of all nodes, referenced by their IDs
     def get_node_mappings(self):
         if len(self.children) == 0:
             dictionary = {self.ID: self}
@@ -1396,7 +1396,7 @@ class Node:
                     self.optional_node_pairs[i][1] = self
 
     # This function finds subtrees in the parser and return the IDs of the root nodes
-    # Parseretrees with multiple parents are not supported (Remove matchedSubtreeIndices + Save number of includions in subtrees)
+    # Parsertrees with multiple parents are not supported (Remove matchedSubtreeIndices + Save number of inclusions in subtrees)
     def get_subtrees(self, min_height):
         debug_mode = False
         subtree_list = [node for node in self.get_leaves()]
@@ -1940,7 +1940,7 @@ class Node:
         if not ignore_first_subtree and (
                 any(self in subtree for subtree in subtree_list) or any(self == pair[1] for pair in self.optional_node_pairs)):
             subtree_number = next((i for i in range(len(subtree_list)) if self in subtree_list[i]), None)
-            return_string += '\t' * depth + 'subTree' + str(subtree_number) + ',\n'
+            return_string += '\t' * depth + 'sub_tree' + str(subtree_number) + ',\n'
             return return_string
 
         if any(self == pair[0] for pair in self.optional_node_pairs):
@@ -1966,7 +1966,6 @@ class Node:
                 agg_elements += ']'
             else:
                 self.element = self.element.replace('\\', '\\\\').replace('\'', '\\\'')
-        return return_string
 
         # Delimited or VariableByte Datamodels should only be used when necessary, use more specific elements if possible
         variable_parser_model = 'var'
@@ -1981,7 +1980,7 @@ class Node:
                     variable_parser_model = 'DecimalIntegerValueModelElement(\'port' + str(id1.value) + '\'),\n'
                 else:
                     variable_parser_model = 'DecimalIntegerValueModelElement(\'integer' + str(
-                        id1.value) + '\', valueSignType = DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),\n'
+                        id1.value) + '\', value_sign_type = DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),\n'
             elif 'base64' in self.datatype:
                 variable_parser_model = 'Base64StringModelElement(\'base64encoded' + str(id1.value) + '\'),\n'
             elif 'hex' in self.datatype:
@@ -1991,7 +1990,7 @@ class Node:
             elif 'float' in self.datatype:
                 variable_parser_model = 'DecimalFloatValueModelElement(\'float' + str(id1.value) + '\'),\n'
             else:
-                variable_parser_model = 'VariableByteDataModelElement(\'string' + str(id1.value) + '\', dict),\n'
+                variable_parser_model = 'VariableByteDataModelElement(\'string' + str(id1.value) + '\', alphabet),\n'
 
         if len(self.children) == 0:
             # Node is a leaf node, return node info and do nothing else
@@ -2141,7 +2140,7 @@ class Node:
         return_string = ''
         if subtree_list:
             for i in range(len(subtree_list)):
-                return_string += '\tsubTree' + str(i) + ' = ' + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n' + \
+                return_string += '\tsub_tree' + str(i) + ' = ' + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n' + \
                                  subtree_list[i][0].write_config(2, id1, subtree_list, ignore_first_subtree=True)[:-2] + '])\n\n'
                 # [:-2] removes comma following last ModelElement and tabulator preceding first ModelElement
 

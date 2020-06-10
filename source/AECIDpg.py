@@ -1,4 +1,4 @@
-from source import LogLine, Node, GlobalID, PGConfig
+import LogLine, Node, GlobalID, PGConfig
 from collections import Counter
 
 
@@ -7,7 +7,7 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
     """If there is a cycle that is reachable from root, then this will see infinite recursion.
        G: the graph
        root: the root node
-       levels: a dictionary
+       levels: a alphabet
                key: level number (starting from 0)
                value: number of nodes in this level
        width: horizontal space allocated for drawing
@@ -117,7 +117,7 @@ root = Node.Node()
 root.occurrence = len(log_line_dict)
 # Build tree recursively
 root.build_tree(0, log_line_dict, delimiters, PGConfig.theta1, PGConfig.theta2, PGConfig.theta3, PGConfig.theta4, PGConfig.theta5,
-               PGConfig.theta6, PGConfig.damping, PGConfig.force_branch, PGConfig.force_var)
+                PGConfig.theta6, PGConfig.damping, PGConfig.force_branch, PGConfig.force_var)
 
 # Sort fixed elements after branches because the AMiner takes the wrong path if elements are subsets of each other
 print('Sort branches')
@@ -203,15 +203,15 @@ print('Optional occurrences sum: ' + str(root.count_optional_occurrences()))
 counter = Counter(root.count_datatypes())
 print('Datatypes: ' + str(counter))
 
-# Build a dictionary of all characters except delimiters for the parser
-dictionary = ''
+# Build a alphabet of all characters except delimiters for the parser
+alphabet = ''
 for i in range(32, 127):
-    dictionary += chr(i)
+    alphabet += chr(i)
 
 for delimiter in delimiters:
-    dictionary = dictionary.replace(delimiter, '')
-dictionary = dictionary.replace('\\', '\\\\')
-dictionary = dictionary.replace('\'', '\\\'')
+    alphabet = alphabet.replace(delimiter, '')
+alphabet = alphabet.replace('\\', '\\\\')
+alphabet = alphabet.replace('\'', '\\\'')
 
 # Write config file using Depth First Search
 print('Write parser')
@@ -233,8 +233,8 @@ config += 'from aminer.parsing import OptionalMatchModelElement\n'
 config += 'from aminer.parsing import SequenceModelElement\n'
 config += 'from aminer.parsing import VariableByteDataModelElement\n'
 config += '\n'
-config += 'def getModel():\n'
-config += '\tdict = b\'' + dictionary + '\'\n\n'
+config += 'def get_model():\n'
+config += '\talphabet = b\'' + alphabet + '\'\n\n'
 config += root.write_config_subtrees(ID, subtree_list)  # Adding the subtrees to the config
 config += '\tmodel = ' + root.write_config(1, ID, subtree_list)[1:-2] + '\n\n'
 # [1:-2] removes newline and comma following last ModelElement and tabulator preceding first ModelElement
