@@ -1,479 +1,498 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
 """This class describes a node of the parsing tree"""
 from collections import Counter
 from dateutil.parser import parse as datetimeparse
 import base64
 import binascii
 import socket
-import PGConfig
+
 
 class Node:
-    def __init__(self, optionalNodePairs = [], mergeTupple = []):
+    def __init__(self, optional_node_pairs=None, merge_tuple=None):
+        if optional_node_pairs is None:
+            optional_node_pairs = []
+        if merge_tuple is None:
+            merge_tuple = []
         self.element = None
-        self.isList = False # If this is True, then self.element is a list
-        self.isVariable = False
+        self.is_list = False  # If this is True, then self.element is a list
+        self.is_variable = False
         self.parent = None
         self.occurrence = 0
         self.end = False
         self.children = []
         self.theta1 = 0
-        self.endingLines = 0
-        self.datatype = ['string', 'integer', 'float', 'ipaddress'] #, 'datetime', 'base64', 'hex']
-        self.endingLineNumbers = [] # Used for evaluation
+        self.ending_lines = 0
+        self.datatype = ['string', 'integer', 'float', 'ipaddress']  # , 'datetime', 'base64', 'hex']
+        self.ending_line_numbers = []  # Used for evaluation
         self.ID = 1
-        self.optionalNodePairs = optionalNodePairs # List of the First and the last
-        self.mergeTupple = mergeTupple # List of nodes, which are inserted into the branch after the matching has happened
+        self.optional_node_pairs = optional_node_pairs  # List of the First and the last
+        self.merge_tuple = merge_tuple  # List of nodes, which are inserted into the branch after the matching has happened
 
-    # This method makes a deep copy of 
-    def deepCopy(self, endNode):
-        newEndNode = None
-        newNode = Node(self.optionalNodePairs, self.mergeTupple)
+    # This method makes a deep copy of
+    def deepcopy(self, end_node):
+        new_end_node = None
+        new_node = Node(self.optional_node_pairs, self.merge_tuple)
 
-        if self.isList:
-            newNode.element = []
-            newNode.element.extend(self.element)
+        if self.is_list:
+            new_node.element = []
+            new_node.element.extend(self.element)
         else:
-            newNode.element = self.element
+            new_node.element = self.element
 
-        newNode.isList = self.isList
-        newNode.isVariable = self.isVariable
-        newNode.occurrence = self.occurrence
-        newNode.end = self.end
-        newNode.theta1 = self.theta1
-        newNode.endingLines = self.endingLines
-        newNode.datatype = []
-        newNode.datatype.extend(self.datatype)
+        new_node.is_list = self.is_list
+        new_node.is_variable = self.is_variable
+        new_node.occurrence = self.occurrence
+        new_node.end = self.end
+        new_node.theta1 = self.theta1
+        new_node.ending_lines = self.ending_lines
+        new_node.datatype = []
+        new_node.datatype.extend(self.datatype)
 
-        if self != endNode:
+        if self != end_node:
             for child in self.children:
-                if newEndNode == None:
-                    [newChild, newEndNode] = child.deepCopy(endNode)
-                    newNode.children.append(newChild)
+                if new_end_node is None:
+                    [new_child, new_end_node] = child.deepcopy(end_node)
+                    new_node.children.append(new_child)
                 else:
-                    newNode.children.append(child.deepCopy(endNode)[0])
+                    new_node.children.append(child.deepcopy(end_node)[0])
 
-            for child in newNode.children:
-                child.parent = newNode
+            for child in new_node.children:
+                child.parent = new_node
 
         else:
-            newEndNode = newNode
+            new_end_node = new_node
 
-        return [newNode, newEndNode]
+        return [new_node, new_end_node]
 
     # This method returns a textual representation of the parser tree, with additional node information (line occurrences, end node, theta)
-    def toString(self, depth):
-        returnString = ''
+    def to_string(self, depth):
+        return_string = ''
 
         numberstring = ''
-        if len(self.endingLineNumbers) > 0:
+        if len(self.ending_line_numbers) > 0:
             numberstring = ' EndingLineNumbers = ['
-            for endingLinenumber in self.endingLineNumbers:
-                numberstring += str(endingLinenumber) + ','
+            for ending_linenumber in self.ending_line_numbers:
+                numberstring += str(ending_linenumber) + ','
             numberstring += ']'
 
-        if self.element == None:
-            returnString += 'root (' + str(self.occurrence) + ')\n'
+        if self.element is None:
+            return_string += 'root (' + str(self.occurrence) + ')\n'
         else:
-            if self.isList == True:
-                if self.end == True:
-                    returnString += ' ' * depth + '- ' + str(self.element) + ' (' + str(self.occurrence) + ') - End (' + str(self.endingLines) + ') - Theta=' + str(self.theta1)  + numberstring + '\n'
+            if self.is_list:
+                if self.end:
+                    return_string += ' ' * depth + '- ' + str(self.element) + ' (' + str(self.occurrence) + ') - End (' + str(
+                        self.ending_lines) + ') - Theta=' + str(self.theta1) + numberstring + '\n'
                 else:
-                    returnString += ' ' * depth + '- ' + str(self.element) + ' (' + str(self.occurrence) + ') - Theta=' + str(self.theta1)  + numberstring + '\n'
+                    return_string += ' ' * depth + '- ' + str(self.element) + ' (' + str(self.occurrence) + ') - Theta=' + str(
+                        self.theta1) + numberstring + '\n'
             else:
-                if self.end == True:
-                    returnString += ' ' * depth + '- ' + self.element + ' (' + str(self.occurrence) + ') - End (' + str(self.endingLines) + ') - Theta=' + str(self.theta1)  + numberstring + '\n'
+                if self.end:
+                    return_string += ' ' * depth + '- ' + self.element + ' (' + str(self.occurrence) + ') - End (' + str(
+                        self.ending_lines) + ') - Theta=' + str(self.theta1) + numberstring + '\n'
                 else:
-                    returnString += ' ' * depth + '- ' + self.element + ' (' + str(self.occurrence) + ') - Theta=' + str(self.theta1)  + numberstring + '\n'
+                    return_string += ' ' * depth + '- ' + self.element + ' (' + str(self.occurrence) + ') - Theta=' + str(
+                        self.theta1) + numberstring + '\n'
 
         for child in self.children:
-            returnString += child.toString(depth + 1)
+            return_string += child.to_string(depth + 1)
 
-        return returnString
+        return return_string
 
     # This method returns the total amount of nodes in the parser tree
-    def countNodes(self):
+    def count_nodes(self):
         if len(self.children) == 0:
             return 1
         elif len(self.children) == 1:
-            return 1 + self.children[0].countNodes()
+            return 1 + self.children[0].count_nodes()
         else:
-            sum = 0
+            sum1 = 0
             for child in self.children:
-                sum += child.countNodes()
-            return 1 + sum
+                sum1 += child.count_nodes()
+            return 1 + sum1
 
     # This method returns the total amount of leaves in the parser tree
-    def countLeaves(self):
+    def count_leaves(self):
         if len(self.children) == 0:
             return 1
         elif len(self.children) == 1:
-            return self.children[0].countLeaves()
+            return self.children[0].count_leaves()
         else:
-            sum = 0
+            sum1 = 0
             for child in self.children:
-                sum += child.countLeaves()
-            return sum
+                sum1 += child.count_leaves()
+            return sum1
 
     # This method returns the total amount of variable nodes in the parser tree
-    def countVariables(self):
+    def count_variables(self):
         val = 0
-        if self.isVariable == True:
+        if self.is_variable:
             val = 1
 
         if len(self.children) == 0:
             return val
         elif len(self.children) == 1:
-            return val + self.children[0].countVariables()
+            return val + self.children[0].count_variables()
         else:
-            sum = 0
+            sum1 = 0
             for child in self.children:
-                sum += child.countVariables()
-            return val + sum
+                sum1 += child.count_variables()
+            return val + sum1
 
     # This method returns the total amount of fixed nodes in the parser tree
-    def countFixed(self):
+    def count_fixed(self):
         val = 0
-        if self.isVariable == False:
+        if not self.is_variable:
             val = 1
 
         if len(self.children) == 0:
             return val
         elif len(self.children) == 1:
-            return val + self.children[0].countVariables()
+            return val + self.children[0].count_variables()
         else:
-            sum = 0
+            sum1 = 0
             for child in self.children:
-                sum += child.countVariables()
-            return val + sum
+                sum1 += child.count_variables()
+            return val + sum1
 
-    # This method returns the total amount of log lines that end in one of the leaves, i.e., all parsing log lines except the ones ending before optional elements
-    def countLeaveOccurrences(self):
+    # This method returns the total amount of log lines that end in one of the leaves, i.e., all parsing log lines except the ones ending
+    # before optional elements
+    def count_leave_occurrences(self):
         if len(self.children) == 0:
             return self.occurrence
         elif len(self.children) == 1:
-            return self.children[0].countLeaveOccurrences()
+            return self.children[0].count_leave_occurrences()
         else:
-            sum = 0
+            sum1 = 0
             for child in self.children:
-                sum += child.countLeaveOccurrences()
-            return sum
+                sum1 += child.count_leave_occurrences()
+            return sum1
 
-    # This method returns the total amount of log lines that end before optional elements, i.e., all parsing log lines except the ones ending at a leave
-    def countOptionalOccurrences(self):
+    # This method returns the total amount of log lines that end before optional elements, i.e., all parsing log lines except the ones
+    # ending at a leave
+    def count_optional_occurrences(self):
         if len(self.children) == 0:
-            return 0 # Leave can never be optional
+            return 0  # Leave can never be optional
         elif len(self.children) == 1:
-            if self.end == True:
-                return self.endingLines + self.children[0].countOptionalOccurrences()
+            if self.end:
+                return self.ending_lines + self.children[0].count_optional_occurrences()
             else:
-                return self.children[0].countOptionalOccurrences()
+                return self.children[0].count_optional_occurrences()
         else:
-            sum = 0
+            sum1 = 0
             for child in self.children:
-                sum += child.countOptionalOccurrences()
+                sum1 += child.count_optional_occurrences()
 
-            if self.end == True:
-                return self.endingLines + sum
+            if self.end:
+                return self.ending_lines + sum1
             else:
-                return sum
+                return sum1
 
     # This method returns an array of all node datatypes. A counter could be used to aggregate the result
-    def countDatatypes(self):
-        if self.isVariable == True:
+    def count_datatypes(self):
+        if self.is_variable:
             if 'ipaddress' in self.datatype:
-                thisDatatype = 'ipaddress'
+                this_datatype = 'ipaddress'
             elif 'base64' in self.datatype:
-                thisDatatype = 'base64'
+                this_datatype = 'base64'
             elif 'hex' in self.datatype:
-                thisDatatype = 'hex'
+                this_datatype = 'hex'
             elif 'datetime' in self.datatype:
-                thisDatatype = 'datetime'
+                this_datatype = 'datetime'
             elif 'integer' in self.datatype:
-                thisDatatype = 'integer'
+                this_datatype = 'integer'
             elif 'float' in self.datatype:
-                thisDatatype = 'float'
+                this_datatype = 'float'
             else:
-                thisDatatype = 'string'
+                this_datatype = 'string'
         else:
-            thisDatatype = 'fix'
+            this_datatype = 'fix'
 
         if len(self.children) == 0:
-            return [thisDatatype]
+            return [this_datatype]
         elif len(self.children) == 1:
-            childDatatypes = []
-            childDatatypes.extend(self.children[0].countDatatypes())
-            childDatatypes.append(thisDatatype)
-            return childDatatypes
+            child_datatypes = []
+            child_datatypes.extend(self.children[0].count_datatypes())
+            child_datatypes.append(this_datatype)
+            return child_datatypes
         else:
-            childDatatypes = []
+            child_datatypes = []
             for child in self.children:
-                childDatatypes.extend(child.countDatatypes())
+                child_datatypes.extend(child.count_datatypes())
 
-            childDatatypes.append(thisDatatype)
-            return childDatatypes
+            child_datatypes.append(this_datatype)
+            return child_datatypes
 
-    # Sorts the subtreeList in ascending order
-    def subtreeHeight(self):
+    # Sorts the subtree_list in ascending order
+    def subtree_height(self):
         if len(self.children) == 0:
             return 0
         else:
-            return max(child.subtreeHeight() for child in self.children) + 1
+            return max(child.subtree_height() for child in self.children) + 1
 
     # This method aggregates two subsequent fixed nodes in order to reduce the overall amount of nodes and tree complexity
-    def aggregateSequences(self, subtreeList = []):
+    def aggregate_sequences(self, subtree_list=None):
+        if subtree_list is None:
+            subtree_list = []
         if len(self.children) == 0:
             return
         elif len(self.children) == 1:
             child = self.children[0]
-            if self.element is not None and not self.isVariable and not self.isList and not self.end and not child.isVariable and not child.isList and \
-                    not any(child in subtree for subtree in subtreeList) and not any(child in pair for pair in self.optionalNodePairs):
+            if self.element is not None and not self.is_variable and not self.is_list and not self.end and not child.is_variable and\
+                    not child.is_list and not any(
+                    child in subtree for subtree in subtree_list) and not any(child in pair for pair in self.optional_node_pairs):
                 # Merge following node into this node
                 self.element = str(self.element) + str(child.element)
                 self.children = child.children
                 child.parent = None
                 self.end = child.end
-                self.endingLines = child.endingLines
-                self.endingLineNumbers = child.endingLineNumbers
+                self.ending_lines = child.ending_lines
+                self.ending_line_numbers = child.ending_line_numbers
                 for childchild in child.children:
                     childchild.parent = self
-                self.aggregateSequences(subtreeList)
+                self.aggregate_sequences(subtree_list)
             else:
-                child.aggregateSequences(subtreeList)
+                child.aggregate_sequences(subtree_list)
         else:
             for child in self.children:
-                child.aggregateSequences(subtreeList)
+                child.aggregate_sequences(subtree_list)
 
     # This method returns a dictionary of all nodes, referenced by their IDs
-    def getNodeMappings(self):
+    def get_node_mappings(self):
         if len(self.children) == 0:
-            dict = {self.ID : self}
-            return dict
+            dictionary = {self.ID: self}
+            return dictionary
         elif len(self.children) == 1:
             child = self.children[0]
-            dict = child.getNodeMappings()
-            dict.update({self.ID : self})
-            return dict
+            dictionary = child.get_node_mappings()
+            dictionary.update({self.ID: self})
+            return dictionary
         else:
-            dict = {self.ID: self}
+            dictionary = {self.ID: self}
             for child in self.children:
-                dict.update(child.getNodeMappings())
-            return dict
+                dictionary.update(child.get_node_mappings())
+            return dictionary
 
     # This method returns all edges of the parser tree
-    def getNodeConnections(self):
+    def get_node_connections(self):
         if len(self.children) == 0:
             return []
         elif len(self.children) == 1:
             child = self.children[0]
             connection = (self.ID, child.ID)
-            childConnections = child.getNodeConnections()
-            childConnections.append(connection)
-            return childConnections
+            child_connections = child.get_node_connections()
+            child_connections.append(connection)
+            return child_connections
         else:
-            connectionList = []
+            connection_list = []
             for child in self.children:
                 connection = (self.ID, child.ID)
-                connectionList.append(connection)
-                childConnections = child.getNodeConnections()
-                if childConnections is not None:
-                    connectionList.extend(childConnections)
-            return connectionList
+                connection_list.append(connection)
+                child_connections = child.get_node_connections()
+                if child_connections is not None:
+                    connection_list.extend(child_connections)
+            return connection_list
 
     # This method retruns all leave nodes
-    def getLeaves(self):
+    def get_leaves(self):
         if len(self.children) == 0:
             return [self]
         elif len(self.children) == 1:
-            return self.children[0].getLeaves()
+            return self.children[0].get_leaves()
         else:
-            nodeList = []
+            node_list = []
             for child in self.children:
-                nodeList += child.getLeaves()
-            return nodeList
+                node_list += child.get_leaves()
+            return node_list
 
     # This method sorts the children after each branch in order to avoid AMiner issues regarding subset path elements
-    def sortChildren(self):
-        if self.isList:
-            self.element.sort(key = lambda x: len(x), reverse=True)
+    def sort_children(self):
+        if self.is_list:
+            self.element.sort(key=lambda x: len(x), reverse=True)
 
         if len(self.children) == 0:
             return
         elif len(self.children) == 1:
             child = self.children[0]
-            child.sortChildren()
+            child.sort_children()
             return
         else:
-            sortedChildren = []
-            variableIndex = -1
+            variable_index = -1
             for i in range(len(self.children)):
-                if self.children[i].isVariable:
-                    variableIndex = i
+                if self.children[i].is_variable:
+                    variable_index = i
                     break
 
-            if variableIndex != -1:
+            if variable_index != -1:
                 # Sort the intern lists of nodes with listelements
                 for child in self.children:
-                    if child.isList:
-                        child.element = sorted(child.element, key = lambda x: (len(x), x), reverse=True)
+                    if child.is_list:
+                        child.element = sorted(child.element, key=lambda x: (len(x), x), reverse=True)
                 # Sort the children
-                sortedChildren1 = sorted((child for child in self.children if not child.isVariable and not child.isList), key = lambda x: (len(x.element), x.element), reverse=True)
-                sortedChildren2 = sorted((child for child in self.children if not child.isVariable and child.isList), key = lambda x: (len(x.element[0]), x.element[0]), reverse=True)
-                self.children = sortedChildren1+sortedChildren2+[self.children[variableIndex]]
+                sorted_children1 = sorted((child for child in self.children if not child.is_variable and not child.is_list),
+                                          key=lambda x: (len(x.element), x.element), reverse=True)
+                sorted_children2 = sorted((child for child in self.children if not child.is_variable and child.is_list),
+                                          key=lambda x: (len(x.element[0]), x.element[0]), reverse=True)
+                self.children = sorted_children1 + sorted_children2 + [self.children[variable_index]]
             else:
                 # Sort the intern lists of nodes with listelements
                 for child in self.children:
-                    if child.isList:
-                        child.element = sorted(child.element, key = lambda x: (len(x), x), reverse=True)
+                    if child.is_list:
+                        child.element = sorted(child.element, key=lambda x: (len(x), x), reverse=True)
                 # Sort the children
-                sortedChildren1 = sorted((child for child in self.children if not child.isList), key = lambda x: (len(x.element), x.element), reverse=True)
-                sortedChildren2 = sorted((child for child in self.children if child.isList), key = lambda x: (len(x.element[0]), x.element[0]), reverse=True)
-                self.children = sortedChildren1 + sortedChildren2
+                sorted_children1 = sorted((child for child in self.children if not child.is_list),
+                                          key=lambda x: (len(x.element), x.element), reverse=True)
+                sorted_children2 = sorted((child for child in self.children if child.is_list),
+                                          key=lambda x: (len(x.element[0]), x.element[0]), reverse=True)
+                self.children = sorted_children1 + sorted_children2
 
             for child in self.children:
-                child.sortChildren()
+                child.sort_children()
             return
 
     # This method tries to replaces branches with lists in order to simplify the tree
-    def insertLists(self):
+    def insert_lists(self):
         if len(self.children) == 0:
             return
         elif len(self.children) == 1:
-            self.children[0].insertLists()
+            self.children[0].insert_lists()
             return
         else:
-            allChildrenEqual = True
-            compareChild = self.children[0]
+            all_children_equal = True
+            compare_child = self.children[0]
             for i in range(1, len(self.children)):
-                if compareChild.isPathIdentical(self.children[i], True) == False:
-                    # Note that with this criteria, all branches must be equal to create a list. For future work, this could be extended to only some equal branches
-                    allChildrenEqual = False
+                if not compare_child.is_path_identical(self.children[i], True):
+                    # Note that with this criteria, all branches must be equal to create a list. For future work, this could be extended to
+                    # only some equal branches
+                    all_children_equal = False
                     break
 
-            if allChildrenEqual == True:
+            if all_children_equal:
                 # Insert a list instead of a branch
                 for i in range(1, len(self.children)):
-                    compareChild.mergeNode(self.children[i])
-                    compareChild.mergePaths(self.children[i])
-                self.children = [compareChild]
+                    compare_child.merge_node(self.children[i])
+                    compare_child.merge_paths(self.children[i])
+                self.children = [compare_child]
 
             for child in self.children:
-                child.insertLists()
+                child.insert_lists()
             return
 
     # This method merges two equal paths
-    def mergePaths(self, node):
+    def merge_paths(self, node):
         self.occurrence += node.occurrence
-        self.endingLines += node.endingLines
-        #self.endingLineNumbers.extend(node.endingLineNumbers) # For Evaluation, comment out if not needed
+        self.ending_lines += node.ending_lines
+        # self.ending_line_numbers.extend(node.ending_line_numbers) # For Evaluation, comment out if not needed
 
         # Because of previous checks done by other methods, the paths are equal, i.e., they have the same number of children
         if len(self.children) == 0:
-            return
+            return None
         elif len(self.children) == 1:
-            return self.children[0].mergePaths(node.children[0])
+            return self.children[0].merge_paths(node.children[0])
         elif len(self.children) > 1:
             for i in range(0, len(self.children)):
-                self.children[i].mergePaths(node.children[i])
+                self.children[i].merge_paths(node.children[i])
             return
 
     # This method checks whether two paths are equal
-    def isPathIdentical(self, node, initial):
+    def is_path_identical(self, node, initial):
         # The sibling nodes will be transformed into a list, therefore the elements must be equal except in the initial step
-        if (initial == True or self.element == node.element) and self.isVariable == node.isVariable and self.end == node.end and len(self.children) == len(node.children) and self.datatype == node.datatype:
+        if (initial or self.element == node.element) and self.is_variable == node.is_variable and self.end == node.end and len(
+                self.children) == len(node.children) and self.datatype == node.datatype:
             if len(self.children) == 0:
                 return True
             elif len(self.children) == 1:
-                return self.children[0].isPathIdentical(node.children[0], False)
+                return self.children[0].is_path_identical(node.children[0], False)
             elif len(self.children) > 1:
                 result = True
                 for i in range(0, len(self.children)):
-                    result = result and self.children[i].isPathIdentical(node.children[i], False) # Requires that all branches were sorted before! (e.g., by calling sortedChildren)
+                    result = result and self.children[i].is_path_identical(node.children[i], False)
+                    # Requires that all branches were sorted before! (e.g., by calling sorted_children)
                 return result
         else:
             return False
 
     # This method inserts variables when nodes are followed by mostly identical paths
-    def insertVariables(self, minSimilarity, delimiters, depth, forceBranch):
+    def insert_variables(self, min_similarity, delimiters, depth, force_branch):
         if len(self.children) == 0:
             # Leave node; do nothing
             return
         elif len(self.children) == 1:
             # Only one child exists; no need to insert variable
             child = self.children[0]
-            child.insertVariables(minSimilarity, delimiters, depth+1, forceBranch)
+            child.insert_variables(min_similarity, delimiters, depth + 1, force_branch)
             return
         else:
-            if depth not in forceBranch:
+            if depth not in force_branch:
                 # Multiple children exist; try to insert variable if they are similar
-                allChildrenSimilar = True
-                compareChild = self.children[0]
+                all_children_similar = True
+                compare_child = self.children[0]
                 for i in range(1, len(self.children)):
-                    similarities = compareChild.getPathSimilaritiesEnhanced(self.children[i], True, delimiters)
+                    similarities = compare_child.get_path_similarities_enhanced(self.children[i], True, delimiters)
                     similarity = 0
                     if len(similarities) > 0:
                         similarity = sum(similarities) / float(len(similarities))
-                    #print(similarity)
-                    #print('~ Compute ~')
-                    #for template in compareChild.getTemplates(''):
+                    # print(similarity)
+                    # print('~ Compute ~')
+                    # for template in compare_child.get_templates(''):
                     #    print(' ' + template)
-                    #print('~ with ~')
-                    #for template in self.children[i].getTemplates(''):
+                    # print('~ with ~')
+                    # for template in self.children[i].get_templates(''):
                     #    print(' ' + template)
-                    #print(str(sum(similarities)) + '/' + str(len(similarities)) + '=' + str(similarity))
+                    # print(str(sum(similarities)) + '/' + str(len(similarities)) + '=' + str(similarity))
                     # Never insert a variable when delimiters are involved
-                    #print(str(self.children[i].datatype) + str(self.children[i].element))
-                    #if self.parent is not None and self.parent.parent is not None and self.parent.parent.parent is not None and self.parent.parent.parent.element == 'msg':
+                    # print(str(self.children[i].datatype) + str(self.children[i].element))
+                    # if self.parent is not None and self.parent.parent is not None and self.parent.parent.parent is not None and
+                    #       self.parent.parent.parent.element == 'msg':
                     #    print(similarity)
-                    #    for template in compareChild.getTemplates(''):
+                    #    for template in compare_child.get_templates(''):
                     #        print(' ' + template)
                     #        print('~ with ~')
-                    #    for template in self.children[i].getTemplates(''):
+                    #    for template in self.children[i].get_templates(''):
                     #        print(' ' + template)
-                    if similarity < minSimilarity or any((c in self.children[i].element) for c in delimiters): # Consecutive delimiters are merged during tree building, requires this kind of check
-                        # Note that with this criteria, all branches must be similar to insert a variable. For future work, this could be extended to only some similar branches
-                        allChildrenSimilar = False
+                    if similarity < min_similarity or any((c in self.children[i].element) for c in delimiters):
+                        # Consecutive delimiters are merged during tree building, requires this kind of check
+                        # Note that with this criteria, all branches must be similar to insert a variable. For future work, this could be
+                        # extended to only some similar branches
+                        all_children_similar = False
                         break
 
                 # Never insert a variable when delimiters are involved
-                if allChildrenSimilar == True:# and compareChild.element not in delimiters:
+                if all_children_similar:  # and compare_child.element not in delimiters:
                     # Insert a variable instead of a branch
                     print('~ The following loglines are similar ~')
-                    for template in self.getTemplates(''):
+                    for template in self.get_templates(''):
                         print(' ' + template)
-                    compareChild.element = '§'
-                    compareChild.isVariable = True
+                    compare_child.element = '§'
+                    compare_child.is_variable = True
                     for i in range(1, len(self.children)):
                         print('~ The following loglines are merged ~')
-                        print(compareChild.getTemplates(''))
-                        print(self.children[i].getTemplates(''))
-                        compareChild.datatype = [typ for typ in compareChild.datatype if typ in self.children[i].datatype]
-                        compareChild.mergeSimilarPathsEnhanced(self.children[i], True)
-                    self.children = [compareChild]
+                        print(compare_child.get_templates(''))
+                        print(self.children[i].get_templates(''))
+                        compare_child.datatype = [typ for typ in compare_child.datatype if typ in self.children[i].datatype]
+                        compare_child.merge_similar_paths_enhanced(self.children[i], True)
+                    self.children = [compare_child]
 
             for child in self.children:
-                child.insertVariables(minSimilarity, delimiters, depth+1, forceBranch)
+                child.insert_variables(min_similarity, delimiters, depth + 1, force_branch)
             return
 
     # This method merges two similar paths
-    def mergeSimilarPaths(self, node, initial):
-        #print('Merging ' + str(self.element) + ' with ' + str(node.element))
+    def merge_similar_paths(self, node, initial):
+        # print('Merging ' + str(self.element) + ' with ' + str(node.element))
 
-        # Nodes cannot simply be merged when one of the children is a variable, because this would mix variable and fixed elements after branch.
-        # Stop merging propagation and wait until similarities of children are computed in next iteration of insertVariables
+        # Nodes cannot simply be merged when one of the children is a variable, because this would mix variable and fixed elements after
+        # branch. Stop merging propagation and wait until similarities of children are computed in next iteration of insert_variables
         # This did not work, the node.children branch was lost !!!
-        #if initial == False:
+        # if initial == False:
         #    for child in self.children:
-        #        if child.isVariable == True:
+        #        if child.is_variable == True:
         #            return
         #    for child in node.children:
-        #        if child.isVariable == True:
+        #        if child.is_variable == True:
         #            return
 
         self.occurrence += node.occurrence
-        self.endingLines += node.endingLines
-        #self.endingLineNumbers.extend(node.endingLineNumbers) # For Evaluation, comment out if not needed
+        self.ending_lines += node.ending_lines
+        # self.ending_line_numbers.extend(node.ending_line_numbers) # For Evaluation, comment out if not needed
 
         if len(node.children) == 0:
             if len(self.children) != 0:
@@ -485,95 +504,100 @@ class Node:
                 for node in node.children:
                     node.parent = self
         elif len(self.children) == 1:
-            selfChild = self.children[0]
-            containsVariable = False
-            for nodeChild in node.children:
-                if nodeChild.isVariable:
-                    containsVariable = True
+            self_child = self.children[0]
+            contains_variable = False
+            for node_child in node.children:
+                if node_child.is_variable:
+                    contains_variable = True
                     break
 
-            if containsVariable == True:
-                selfChild.datatype = ['string'] # TODO can be improved
-                selfChild.isVariable = True
-                selfChild.element = '§'
-                for nodeChild in node.children:
-                    selfChild.mergeSimilarPaths(nodeChild, False)
-                self.children = [selfChild]
+            if contains_variable:
+                self_child.datatype = ['string']
+                self_child.is_variable = True
+                self_child.element = '§'
+                for node_child in node.children:
+                    self_child.merge_similar_paths(node_child, False)
+                self.children = [self_child]
             else:
-                for nodeChild in node.children:
-                    if selfChild.element == nodeChild.element:# or selfChild.isVariable or nodeChild.isVariable: # In order to avoid branches between variable and fixed children, fixed are always converted to variables in that case
-                        if selfChild.datatype != nodeChild.datatype:
-                            selfChild.datatype = ['string']
-                        #if selfChild.isVariable != nodeChild.isVariable:
-                        #    selfChild.isVariable = True
-                        #    selfChild.element = '§'
-                            #nodeChild.isVariable = True
-                            #nodeChild.element = '§'
-                        selfChild.mergeSimilarPaths(nodeChild, False)
+                for node_child in node.children:
+                    if self_child.element == node_child.element:
+                        # or self_child.is_variable or node_child.is_variable: # In order to avoid branches between variable and fixed
+                        # children, fixed are always converted to variables in that case
+                        if self_child.datatype != node_child.datatype:
+                            self_child.datatype = ['string']
+                        # if self_child.is_variable != node_child.is_variable:
+                        #    self_child.is_variable = True
+                        #    self_child.element = '§'
+                        # node_child.is_variable = True
+                        # node_child.element = '§'
+                        self_child.merge_similar_paths(node_child, False)
                     else:
-                        self.children.append(nodeChild)
-                        nodeChild.parent = self
+                        self.children.append(node_child)
+                        node_child.parent = self
         elif len(self.children) > 1:
-            containsVariable = False
-            for nodeChild in node.children:
-                if nodeChild.isVariable:
-                    containsVariable = True
+            contains_variable = False
+            for node_child in node.children:
+                if node_child.is_variable:
+                    contains_variable = True
                     break
-            for selfChild in self.children:
-                if selfChild.isVariable:
-                    containsVariable = True
+            for self_child in self.children:
+                if self_child.is_variable:
+                    contains_variable = True
                     break
 
-            if containsVariable == True:
-                resultChild = self.children[0]
-                resultChild.datatype = ['string'] # TODO can be improved
-                resultChild.isVariable = True
-                resultChild.element = '§'
-                for nodeChild in node.children:
-                    resultChild.mergeSimilarPaths(nodeChild, False)
+            if contains_variable:
+                result_child = self.children[0]
+                result_child.datatype = ['string']
+                result_child.is_variable = True
+                result_child.element = '§'
+                for node_child in node.children:
+                    result_child.merge_similar_paths(node_child, False)
                 for i in range(1, len(self.children)):
-                    resultChild.mergeSimilarPaths(self.children[i], False)
-                self.children = [resultChild]
+                    result_child.merge_similar_paths(self.children[i], False)
+                self.children = [result_child]
             else:
-                nodeChildsToBeAdded = node.children[:]
+                node_childs_to_be_added = node.children[:]
                 for i in range(0, len(self.children)):
-                    selfChild = self.children[i]
+                    self_child = self.children[i]
                     for j in range(0, len(node.children)):
-                        nodeChild = node.children[j]
-                        if selfChild.element == nodeChild.element:# or selfChild.isVariable or nodeChild.isVariable: # In order to avoid branches between variable and fixed children, fixed are always converted to variables in that case
-                            if selfChild.datatype != nodeChild.datatype:
-                                selfChild.datatype = ['string']
-                            #if selfChild.isVariable != nodeChild.isVariable:
-                            #    selfChild.isVariable = True
-                            #    selfChild.element = '§'
-                                #nodeChild.isVariable = True
-                                #nodeChild.element = '§'
-                            selfChild.mergeSimilarPaths(nodeChild, False)
-                            #if nodeChild in nodeChildsToBeAdded: # Needs to be checked because of converting fixed to variable after branches enables that nodeChild fits more than once
-                            nodeChildsToBeAdded.remove(nodeChild)
+                        node_child = node.children[j]
+                        if self_child.element == node_child.element:
+                            # or self_child.is_variable or node_child.is_variable: # In order to avoid branches between variable and fixed
+                            # children, fixed are always converted to variables in that case
+                            if self_child.datatype != node_child.datatype:
+                                self_child.datatype = ['string']
+                            # if self_child.is_variable != node_child.is_variable:
+                            #    self_child.is_variable = True
+                            #    self_child.element = '§'
+                            # node_child.is_variable = True
+                            # node_child.element = '§'
+                            self_child.merge_similar_paths(node_child, False)
+                            # if node_child in node_childs_to_be_added: # Needs to be checked because of converting fixed to variable after
+                            # branches enables that node_child fits more than once
+                            node_childs_to_be_added.remove(node_child)
                             break
-                self.children.extend(nodeChildsToBeAdded)
-                for nodeChild in nodeChildsToBeAdded:
-                    nodeChild.parent = self
+                self.children.extend(node_childs_to_be_added)
+                for node_child in node_childs_to_be_added:
+                    node_child.parent = self
 
     # This method merges two similar paths
-    def mergeSimilarPathsEnhanced(self, node, initial):
-        #print('Merging ' + str(self.element) + ' with ' + str(node.element))
+    def merge_similar_paths_enhanced(self, node, initial):
+        # print('Merging ' + str(self.element) + ' with ' + str(node.element))
 
-        # Nodes cannot simply be merged when one of the children is a variable, because this would mix variable and fixed elements after branch.
-        # Stop merging propagation and wait until similarities of children are computed in next iteration of insertVariables
+        # Nodes cannot simply be merged when one of the children is a variable, because this would mix variable and fixed elements after
+        # branch. Stop merging propagation and wait until similarities of children are computed in next iteration of insert_variables
         # This did not work, the node.children branch was lost !!!
-        #if initial == False:
+        # if initial == False:
         #    for child in self.children:
-        #        if child.isVariable == True:
+        #        if child.is_variable == True:
         #            return
         #    for child in node.children:
-        #        if child.isVariable == True:
+        #        if child.is_variable == True:
         #            return
 
         self.occurrence += node.occurrence
-        self.endingLines += node.endingLines
-        #self.endingLineNumbers.extend(node.endingLineNumbers) # For Evaluation, comment out if not needed
+        self.ending_lines += node.ending_lines
+        # self.ending_line_numbers.extend(node.ending_line_numbers) # For Evaluation, comment out if not needed
 
         if node.end:
             self.end = True
@@ -588,37 +612,37 @@ class Node:
                 for child in node.children:
                     child.parent = self
         else:
-            if True: # Enhancement
+            if True:  # Enhancement
                 i = 0
                 j = 0
                 while i < len(self.children) and j < len(node.children):
                     # Elements match
                     if self.children[i].element == node.children[j].element:
                         # print('Match ' + str(self.children[i].element) + ' with ' + str(node.children[j].element))
-                        self.children[i].mergeSimilarPathsEnhanced(node.children[j], False)
+                        self.children[i].merge_similar_paths_enhanced(node.children[j], False)
                         if self.children[i] == '§' and self.children[i].datatype != node.children[j].datatype:
                             self.children[i].datatype = [typ for typ in self.children[i].datatype if typ in node.children[j].datatype]
                         i += 1
                         j += 1
 
                     # Match one node if possible
-                    elif self.children[i].element > node.children[j].element: # Match one child of self
+                    elif self.children[i].element > node.children[j].element:  # Match one child of self
                         # Match the node with a variable if present
                         # print('Cannot1 match ' + str(self.children[i].element))
-                        if node.children[-1].isVariable == True:
+                        if node.children[-1].is_variable:
                             # print('Match with Variable')
-                            self.children[i].mergeSimilarPathsEnhanced(node.children[-1], False)
+                            self.children[i].merge_similar_paths_enhanced(node.children[-1], False)
                             self.children[i].datatype = [typ for typ in node.children[j].datatype if typ in node.children[-1].datatype]
                             i += 1
                         else:
                             i += 1
 
-                    else: # Match one child of the node
+                    else:  # Match one child of the node
                         # print('Cannot2 match ' + str(node.children[j].element))
                         # Match the node with a variable if present
-                        if self.children[-1].isVariable == True:
+                        if self.children[-1].is_variable:
                             # print('Match with Variable')
-                            self.children[-1].mergeSimilarPathsEnhanced(node.children[j], False)
+                            self.children[-1].merge_similar_paths_enhanced(node.children[j], False)
                             self.children[-1].datatype = [typ for typ in node.children[j].datatype if typ in node.children[-1].datatype]
                             j += 1
                         else:
@@ -629,9 +653,9 @@ class Node:
                 # Match remaining nodes
                 while j < len(node.children):
                     # print('Match remaining node: ' + str(node.children[j].element))
-                    if self.children[-1].isVariable == True:
+                    if self.children[-1].is_variable:
                         # print('Match with Variable')
-                        self.children[-1].mergeSimilarPathsEnhanced(node.children[j], False)
+                        self.children[-1].merge_similar_paths_enhanced(node.children[j], False)
                         self.children[-1].datatype = [typ for typ in node.children[j].datatype if typ in node.children[-1].datatype]
                         j += 1
                     else:
@@ -639,237 +663,247 @@ class Node:
                         node.children[j].parent = self
                         j += 1
 
-            else: # Original implementation
-                containsVariable = False
-                for nodeChild in node.children:
-                    if nodeChild.isVariable:
-                        containsVariable = True
+            else:  # Original implementation
+                contains_variable = False
+                for node_child in node.children:
+                    if node_child.is_variable:
+                        contains_variable = True
                         break
-                for selfChild in self.children:
-                    if selfChild.isVariable:
-                        containsVariable = True
+                for self_child in self.children:
+                    if self_child.is_variable:
+                        contains_variable = True
                         break
 
-                if containsVariable == True:
-                    resultChild = self.children[0]
-                    resultChild.datatype = ['string'] # TODO can be improved
-                    resultChild.isVariable = True
-                    resultChild.element = '§'
-                    for nodeChild in node.children:
-                        resultChild.mergeSimilarPaths(nodeChild, False)
+                if contains_variable:
+                    result_child = self.children[0]
+                    result_child.datatype = ['string']
+                    result_child.is_variable = True
+                    result_child.element = '§'
+                    for node_child in node.children:
+                        result_child.merge_similar_paths(node_child, False)
                     for i in range(1, len(self.children)):
-                        resultChild.mergeSimilarPaths(self.children[i], False)
-                    self.children = [resultChild]
+                        result_child.merge_similar_paths(self.children[i], False)
+                    self.children = [result_child]
                 else:
-                    nodeChildsToBeAdded = node.children[:]
+                    node_childs_to_be_added = node.children[:]
                     for i in range(0, len(self.children)):
-                        selfChild = self.children[i]
+                        self_child = self.children[i]
                         for j in range(0, len(node.children)):
-                            nodeChild = node.children[j]
-                            if selfChild.element == nodeChild.element:# or selfChild.isVariable or nodeChild.isVariable: # In order to avoid branches between variable and fixed children, fixed are always converted to variables in that case
-                                if selfChild.datatype != nodeChild.datatype:
-                                    selfChild.datatype = ['string']
-                                #if selfChild.isVariable != nodeChild.isVariable:
-                                #    selfChild.isVariable = True
-                                #    selfChild.element = '§'
-                                    #nodeChild.isVariable = True
-                                    #nodeChild.element = '§'
-                                selfChild.mergeSimilarPaths(nodeChild, False)
-                                #if nodeChild in nodeChildsToBeAdded: # Needs to be checked because of converting fixed to variable after branches enables that nodeChild fits more than once
-                                nodeChildsToBeAdded.remove(nodeChild)
+                            node_child = node.children[j]
+                            if self_child.element == node_child.element:
+                                # or self_child.is_variable or node_child.is_variable: # In order to avoid branches between variable and
+                                # fixed children, fixed are always converted to variables in that case
+                                if self_child.datatype != node_child.datatype:
+                                    self_child.datatype = ['string']
+                                # if self_child.is_variable != node_child.is_variable:
+                                #    self_child.is_variable = True
+                                #    self_child.element = '§'
+                                # node_child.is_variable = True
+                                # node_child.element = '§'
+                                self_child.merge_similar_paths(node_child, False)
+                                # if node_child in node_childs_to_be_added: # Needs to be checked because of converting fixed to variable
+                                # after branches enables that node_child fits more than once
+                                node_childs_to_be_added.remove(node_child)
                                 break
-                    self.children.extend(nodeChildsToBeAdded)
-                    for nodeChild in nodeChildsToBeAdded:
-                        nodeChild.parent = self
+                    self.children.extend(node_childs_to_be_added)
+                    for node_child in node_childs_to_be_added:
+                        node_child.parent = self
 
             # print('Merging ' + str(self.element) + ' with ' + str(node.element))
             # print('Children: %s'%[child.element for child in self.children])
 
     # This method checks whether two paths are similar
-    def getPathSimilarities(self, node, initial, delimiters):
-        # Initialize returnList with 1 causes that branches at the end of paths without any children always collapse to a variable
-        if initial == True:
-            returnList = [1]
+    def get_path_similarities(self, node, initial, delimiters):
+        # Initialize return_list with 1 causes that branches at the end of paths without any children always collapse to a variable
+        if initial:
+            return_list = [1]
         else:
-            returnList = []
+            return_list = []
 
         if len(node.children) == 0:
             pass
             # If self branch still has some remaining nodes, add these as mismatches
-            #for child in self.children:
-            #    returnList.extend([0] * child.getNumberOfFollowingNodes())
+            # for child in self.children:
+            #    return_list.extend([0] * child.get_number_of_following_nodes())
         elif len(self.children) == 0:
             pass
             # If node branch still has some remaining nodes, add these as mismatches
-            #for child in node.children:
-            #    returnList.extend([0] * child.getNumberOfFollowingNodes())
+            # for child in node.children:
+            #    return_list.extend([0] * child.get_number_of_following_nodes())
         elif len(self.children) == 1:
-            for nodeChild in node.children:
-                returnList.extend(self.children[0].getPathSimilarities(nodeChild, False, delimiters))
+            for node_child in node.children:
+                return_list.extend(self.children[0].get_path_similarities(node_child, False, delimiters))
         elif len(self.children) > 1:
-            lastIndex = -1
+            last_index = -1
             for i in range(0, len(self.children)):
                 if i < len(node.children):
-                    returnList.extend(self.children[i].getPathSimilarities(node.children[i], False, delimiters)) # Requires that all branches were sorted before! (e.g., by calling sortedChildren)
+                    return_list.extend(self.children[i].get_path_similarities(node.children[i], False, delimiters))
+                    # Requires that all branches were sorted before! (e.g., by calling sorted_children)
                 else:
-                    returnList.extend([0] * self.children[i].getNumberOfFollowingNodes())
-                lastIndex = i
+                    return_list.extend([0] * self.children[i].get_number_of_following_nodes())
+                last_index = i
 
-            for i in range(lastIndex + 1, len(node.children)):
-                returnList.extend([0] * node.children[i].getNumberOfFollowingNodes())
+            for i in range(last_index + 1, len(node.children)):
+                return_list.extend([0] * node.children[i].get_number_of_following_nodes())
 
         # Since it is a branch, the initial elements will never match. Neither add 0 or 1 in that case
-        if initial != True:
-            if self.isVariable == True or node.isVariable == True:
-                # Variables that match with fixed elements or other variables do not say much about the similarity. Neither add 0 or 1 in that case
+        if not initial:
+            if self.is_variable or node.is_variable:
+                # Variables that match with fixed elements or other variables do not say much about the similarity.
+                # Neither add 0 or 1 in that case
                 pass
             elif any((c in self.element) for c in delimiters):
                 # Delimiters often match randomly. Neither add 0 or 1 in that case
                 pass
             elif self.element == node.element:
-                returnList.append(1)
+                return_list.append(1)
             else:
-                returnList.append(0)
+                return_list.append(0)
 
-        return returnList
+        return return_list
 
     # This method checks whether two paths are similar
-    def getPathSimilaritiesEnhanced(self, node, initial, delimiters):
-        # Initialize returnList with 1 causes that branches at the end of paths without any children always collapse to a variable
-        if initial == True:
-            returnList = [1]
+    def get_path_similarities_enhanced(self, node, initial, delimiters):
+        # Initialize return_list with 1 causes that branches at the end of paths without any children always collapse to a variable
+        if initial:
+            return_list = [1]
         else:
-            returnList = []
+            return_list = []
         # print([child.element for child in self.children])
         # print([child.element for child in node.children])
 
         if len(node.children) == 0:
             pass
             # If self branch still has some remaining nodes, add these as mismatches
-            #for child in self.children:
-            #    returnList.extend([0] * child.getNumberOfFollowingNodes())
+            # for child in self.children:
+            #    return_list.extend([0] * child.get_number_of_following_nodes())
         elif len(self.children) == 0:
             pass
             # If node branch still has some remaining nodes, add these as mismatches
-            #for child in node.children:
-            #    returnList.extend([0] * child.getNumberOfFollowingNodes())
+            # for child in node.children:
+            #    return_list.extend([0] * child.get_number_of_following_nodes())
         elif len(self.children) == 1:
-            for nodeChild in node.children:
-                returnList.extend(self.children[0].getPathSimilaritiesEnhanced(nodeChild, False, delimiters))
+            for node_child in node.children:
+                return_list.extend(self.children[0].get_path_similarities_enhanced(node_child, False, delimiters))
         elif len(self.children) > 1:
-            if True: # Enhancement
+            if True:  # Enhancement
                 i = 0
                 j = 0
 
                 while i < len(self.children) and j < len(node.children):
                     # Elements match
                     if self.children[i].element == node.children[j].element:
-                        returnList.extend(self.children[i].getPathSimilaritiesEnhanced(node.children[j], False, delimiters))
-                        #print('Match')
-                        #print(i, j, self.children[i].element, node.children[j].element)
+                        return_list.extend(self.children[i].get_path_similarities_enhanced(node.children[j], False, delimiters))
+                        # print('Match')
+                        # print(i, j, self.children[i].element, node.children[j].element)
                         i += 1
                         j += 1
                     # Match one node if possible
 
-                    elif self.children[i].element > node.children[j].element: # Match one child of self
+                    elif self.children[i].element > node.children[j].element:  # Match one child of self
                         # Match the node with a variable if present
-                        if node.children[-1].isVariable == True:
-                            returnList.extend(self.children[i].getPathSimilaritiesEnhanced(node.children[-1], False, delimiters))
-                            #print('Match')
-                            #print(i, j, self.children[i].element, node.children[-1].element)
+                        if node.children[-1].is_variable:
+                            return_list.extend(self.children[i].get_path_similarities_enhanced(node.children[-1], False, delimiters))
+                            # print('Match')
+                            # print(i, j, self.children[i].element, node.children[-1].element)
                             i += 1
                         else:
-                            returnList.extend([0] * self.children[i].getNumberOfFollowingNodes())
-                            #print('Mismatch')
-                            #print(i,j,self.children[i].element)
+                            return_list.extend([0] * self.children[i].get_number_of_following_nodes())
+                            # print('Mismatch')
+                            # print(i,j,self.children[i].element)
                             i += 1
-                    else: # Match one child of the node
+                    else:  # Match one child of the node
                         # Match the node with a variable if present
-                        if self.children[-1].isVariable == True:
-                            returnList.extend(self.children[-1].getPathSimilaritiesEnhanced(node.children[j], False, delimiters))
-                            #print('Match')
-                            #print(i, j, self.children[-1].element, node.children[j].element)
+                        if self.children[-1].is_variable:
+                            return_list.extend(self.children[-1].get_path_similarities_enhanced(node.children[j], False, delimiters))
+                            # print('Match')
+                            # print(i, j, self.children[-1].element, node.children[j].element)
                             j += 1
                         else:
-                            returnList.extend([0] * node.children[j].getNumberOfFollowingNodes())
-                            #print('Mismatch')
-                            #print(i,j,node.children[j].element)
+                            return_list.extend([0] * node.children[j].get_number_of_following_nodes())
+                            # print('Mismatch')
+                            # print(i,j,node.children[j].element)
                             j += 1
 
-            else: # original implementation of getPathSimilarities
-                lastIndex = -1
+            else:  # original implementation of get_path_similarities
+                last_index = -1
 
                 for i in range(0, len(self.children)):
                     if i < len(node.children):
-                        returnList.extend(self.children[i].getPathSimilaritiesEnhanced(node.children[i], False, delimiters)) # Requires that all branches were sorted before! (e.g., by calling sortChildren)
+                        return_list.extend(self.children[i].get_path_similarities_enhanced(node.children[i], False, delimiters))
+                        # Requires that all branches were sorted before! (e.g., by calling sort_children)
                     else:
-                        returnList.extend([0] * self.children[i].getNumberOfFollowingNodes())
-                    lastIndex = i
+                        return_list.extend([0] * self.children[i].get_number_of_following_nodes())
+                    last_index = i
 
-                for i in range(lastIndex + 1, len(node.children)):
-                    returnList.extend([0] * node.children[i].getNumberOfFollowingNodes())
+                for i in range(last_index + 1, len(node.children)):
+                    return_list.extend([0] * node.children[i].get_number_of_following_nodes())
 
         # Since it is a branch, the initial elements will never match. Neither add 0 or 1 in that case
-        if initial != True:
-            if self.isVariable == True or node.isVariable == True:
-                # Variables that match with fixed elements or other variables do not say much about the similarity. Neither add 0 or 1 in that case
+        if not initial:
+            if self.is_variable or node.is_variable:
+                # Variables that match with fixed elements or other variables do not say much about the similarity.
+                # Neither add 0 or 1 in that case
                 pass
             elif any((c in self.element) for c in delimiters):
                 # Delimiters often match randomly. Neither add 0 or 1 in that case
                 pass
             elif self.element == node.element:
-                returnList.append(1)
+                return_list.append(1)
             else:
-                returnList.append(0)
+                return_list.append(0)
 
-        return returnList
+        return return_list
 
     # This function matches the parser of self with the parser of the note and returns a list of the matched nodes with a similarity score
-    def getSubtreeMatch(self, node, delimiters):
-        debugMode = False
-        elementList1 = self.getElements([0], delimiters) # Dictionary with the elements of the nodes as keys and a list of the paths to the nodes
-        elementList2 = node.getElements([1], delimiters)
+    def get_subtree_match(self, node, delimiters):
+        debug_mode = False
+        element_list1 = self.get_elements([0], delimiters)
+        # Dictionary with the elements of the nodes as keys and a list of the paths to the nodes
+        elementList2 = node.get_elements([1], delimiters)
 
-        if debugMode:
+        if debug_mode:
             print('NewSubtreeMatch:')
-            print(elementList1)
+            print(element_list1)
             print(elementList2)
         # Matching of the entries with one match in both trees
-        elementList = {}
-        for key in elementList1:
-            if key in elementList2 and len(elementList1[key]) == 1 and len(elementList2[key]) == 1:
-                elementList[key] = [[elementList1[key][0], elementList2[key][0]]]
+        element_list = {}
+        for key in element_list1:
+            if key in elementList2 and len(element_list1[key]) == 1 and len(elementList2[key]) == 1:
+                element_list[key] = [[element_list1[key][0], elementList2[key][0]]]
 
-        previousMatches = self.matchParserNodes({}, elementList)
-        if debugMode:
-            print('Result: %s'%previousMatches)
+        previous_matches = self.match_parser_nodes({}, element_list)
+        if debug_mode:
+            print('Result: %s' % previous_matches)
 
-        for i in range(2, 1+max(max([len(elementList1[k]) for k in elementList1]), max([len(elementList2[k]) for k in elementList2]))):
-            elementList = {}
-            for key in elementList1:
-                if len(elementList1[key]) == i and key in elementList2 and (len(elementList2[key]) == 1 or len(elementList2[key]) >= i):
-                    elementList[key] = []
+        for i in range(2, 1 + max(max([len(element_list1[k]) for k in element_list1]), max([len(elementList2[k]) for k in elementList2]))):
+            element_list = {}
+            for key in element_list1:
+                if len(element_list1[key]) == i and key in elementList2 and (len(elementList2[key]) == 1 or len(elementList2[key]) >= i):
+                    element_list[key] = []
                     for j in range(len(elementList2[key])):
-                        elementList[key] += [[elementList1[key][k], elementList2[key][j]] for k in range(len(elementList1[key]))]
+                        element_list[key] += [[element_list1[key][k], elementList2[key][j]] for k in range(len(element_list1[key]))]
             for key in elementList2:
-                if len(elementList2[key]) == i and key in elementList1 and (len(elementList1[key]) == 1 or len(elementList1[key]) > i):
-                    elementList[key] = []
-                    for j in range(len(elementList1[key])):
-                        elementList[key] += [[elementList1[key][j], elementList2[key][k]] for k in range(len(elementList2[key]))]
+                if len(elementList2[key]) == i and key in element_list1 and (len(element_list1[key]) == 1 or len(element_list1[key]) > i):
+                    element_list[key] = []
+                    for j in range(len(element_list1[key])):
+                        element_list[key] += [[element_list1[key][j], elementList2[key][k]] for k in range(len(elementList2[key]))]
 
-            previousMatches = self.matchParserNodes(previousMatches, elementList)
+            previous_matches = self.match_parser_nodes(previous_matches, element_list)
 
-        return [previousMatches, sum([len(previousMatches[x]) for x in previousMatches])/min(sum([len(elementList1[x]) for x in elementList1]), sum([len(elementList2[x]) for x in elementList2]))]
+        return [previous_matches, sum(
+            [len(previous_matches[x]) for x in previous_matches]) / min(
+            sum([len(element_list1[x]) for x in element_list1]), sum([len(elementList2[x]) for x in elementList2]))]
 
     # This function returns a Dictionary with the elements of the nodes as keys and a list of the paths to the nodes
-    def getElements(self, previousPath, delimiters):
-        elementList = {} # Dictionary with the elements of the nodes as keys and a list of the paths to the nodes
+    def get_elements(self, previous_path, delimiters):
+        elementList = {}  # Dictionary with the elements of the nodes as keys and a list of the paths to the nodes
 
-        if str(self.element) not in delimiters and not self.isVariable: # Add the element of the node if it is no delimiter
-            elementList = {str(self.element): [previousPath]}
+        if str(self.element) not in delimiters and not self.is_variable:  # Add the element of the node if it is no delimiter
+            elementList = {str(self.element): [previous_path]}
 
-        for i in range(len(self.children)): # Add the elements of the following nodes to the elementList
-            elementList2 = self.children[i].getElements(previousPath+[i], delimiters)
+        for i in range(len(self.children)):  # Add the elements of the following nodes to the elementList
+            elementList2 = self.children[i].get_elements(previous_path + [i], delimiters)
             for key in elementList2:
                 if key in elementList:
                     elementList[key] += elementList2[key]
@@ -878,180 +912,181 @@ class Node:
 
         return elementList
 
-    # This function gets a consistent set of matches of two trees and a set of possible matches.
-    # The function returns a consistent set of matches which includes the previous  matches and the highest number of possible matches, such that the set stays consistent
-    def matchParserNodes(self, previousMatches, newMatches):
-        debugMode = False
-        if debugMode:
+    # This function gets a consistent set of matches of two trees and a set of possible matches. The function returns a consistent set of
+    # matches which includes the previous  matches and the highest number of possible matches, such that the set stays consistent
+    def match_parser_nodes(self, previous_matches, new_matches):
+        debug_mode = False
+        if debug_mode:
             print('Match:')
-            print('previousMatches: %s'%previousMatches)
-            print('newMatches: %s'%newMatches)
+            print('previous_matches: %s' % previous_matches)
+            print('new_matches: %s' % new_matches)
         # Check if new matches are inconsistent to existing ones
-        keys = list(newMatches.keys())
-        if previousMatches != {}:
-            for i in range(len(keys)-1, -1, -1):
-                for i1 in range(len(newMatches[keys[i]])-1, -1, -1):
+        keys = list(new_matches.keys())
+        if previous_matches != {}:
+            for i in range(len(keys) - 1, -1, -1):
+                for i1 in range(len(new_matches[keys[i]]) - 1, -1, -1):
                     break2 = False
-                    for key2 in previousMatches:
+                    for key2 in previous_matches:
                         if break2:
                             break2 = False
                             break
-                        for i2 in range(len(previousMatches[key2])-1, -1, -1):
-                            if not self.isConsistent(newMatches[keys[i]][i1], previousMatches[key2][i2]):
-                                del newMatches[keys[i]][i1]
+                        for i2 in range(len(previous_matches[key2]) - 1, -1, -1):
+                            if not self.is_consistent(new_matches[keys[i]][i1], previous_matches[key2][i2]):
+                                del new_matches[keys[i]][i1]
                                 break2 = True
                                 break
-                if newMatches[keys[i]] == []:
-                    del newMatches[keys[i]]
+                if not new_matches[keys[i]]:
+                    del new_matches[keys[i]]
                     del keys[i]
 
         # Check if new matches are inconsistent to each other
-        inconsistentMatches = []
+        inconsistent_matches = []
         for i in range(len(keys)):
-            for j in range(i,len(keys)):
-                for i2 in range(len(newMatches[keys[i]])):
-                    for j2 in range(len(newMatches[keys[j]])):
-                        if debugMode and False:
-                            print('Is %s consistent with %s\n%s'%(newMatches[keys[i]][i2], newMatches[keys[j]][j2], self.isConsistent(newMatches[keys[i]][i2], newMatches[keys[j]][j2])))
-                        if not self.isConsistent(newMatches[keys[i]][i2], newMatches[keys[j]][j2]):
-                            inconsistentMatches.append([i,j,i2,j2])
+            for j in range(i, len(keys)):
+                for i2 in range(len(new_matches[keys[i]])):
+                    for j2 in range(len(new_matches[keys[j]])):
+                        if debug_mode and False:
+                            print('Is %s consistent with %s\n%s' % (new_matches[keys[i]][i2], new_matches[keys[j]][j2],
+                                  self.is_consistent(new_matches[keys[i]][i2], new_matches[keys[j]][j2])))
+                        if not self.is_consistent(new_matches[keys[i]][i2], new_matches[keys[j]][j2]):
+                            inconsistent_matches.append([i, j, i2, j2])
 
         # Find minimal Indices so that every element is included at least once in every set
-        inconsistentItems = []
-        while len(inconsistentMatches) != 0:
-            countList = [[0 for j in range(len(newMatches[keys[i]]))] for i in range(len(keys))]
-            for i in range(len(inconsistentMatches)):
-                countList[inconsistentMatches[i][0]][inconsistentMatches[i][2]] += 1
-                countList[inconsistentMatches[i][1]][inconsistentMatches[i][3]] += 1
+        inconsistent_items = []
+        while len(inconsistent_matches) != 0:
+            count_list = [[0 for j in range(len(new_matches[keys[i]]))] for i in range(len(keys))]
+            for i in range(len(inconsistent_matches)):
+                count_list[inconsistent_matches[i][0]][inconsistent_matches[i][2]] += 1
+                count_list[inconsistent_matches[i][1]][inconsistent_matches[i][3]] += 1
 
-            # This section searches for a item to remove from the inconsistentMatches and takes the length of the mismatching into account ([[0],[1]] < [[0,1],[1,1,1,1,1,1,1,1,1]])
-            maxCount = 0
-            tmpIndex = 0
-            tmpIndex2 = 0
-            for i in range(len(countList)):
-                for i2 in range(len(countList[i])):
-                    if countList[i][i2] > maxCount:
-                        maxCount = countList[i][i2]
-                        tmpIndex = i
-                        tmpIndex2 = i2
-                    elif countList[i][i2] == maxCount and \
-                            abs(len(newMatches[keys[i]][i2][0])-len(newMatches[keys[i]][i2][1])) > \
-                            abs(len(newMatches[keys[tmpIndex]][tmpIndex2][0])-len(newMatches[keys[tmpIndex]][tmpIndex2][1])):
-                        tmpIndex = i
-                        tmpIndex2 = i2
-                    elif countList[i][i2] == maxCount and \
-                            abs(len(newMatches[keys[i]][i2][0])-len(newMatches[keys[i]][i2][1])) == \
-                            abs(len(newMatches[keys[tmpIndex]][tmpIndex2][0])-len(newMatches[keys[tmpIndex]][tmpIndex2][1])) and \
-                            max(len(newMatches[keys[i]][i2][0]), len(newMatches[keys[i]][i2][1])) > \
-                            max(len(newMatches[keys[tmpIndex]][tmpIndex2][0]), len(newMatches[keys[tmpIndex]][tmpIndex2][1])):
-                        tmpIndex = i
-                        tmpIndex2 = i2
-            inconsistentItems.append([tmpIndex, tmpIndex2])
+            # This section searches for a item to remove from the inconsistent_matches and takes the length of the mismatching into account
+            # ([[0],[1]] < [[0,1],[1,1,1,1,1,1,1,1,1]])
+            max_count = 0
+            tmp_index = 0
+            tmp_index2 = 0
+            for i in range(len(count_list)):
+                for i2 in range(len(count_list[i])):
+                    if count_list[i][i2] > max_count:
+                        max_count = count_list[i][i2]
+                        tmp_index = i
+                        tmp_index2 = i2
+                    elif count_list[i][i2] == max_count and abs(len(new_matches[keys[i]][i2][0]) - len(new_matches[keys[i]][i2][1])) > abs(
+                            len(new_matches[keys[tmp_index]][tmp_index2][0]) - len(new_matches[keys[tmp_index]][tmp_index2][1])):
+                        tmp_index = i
+                        tmp_index2 = i2
+                    elif count_list[i][i2] == max_count and abs(len(new_matches[keys[i]][i2][0]) - len(new_matches[keys[i]][i2][1])) == abs(
+                            len(new_matches[keys[tmp_index]][tmp_index2][0]) - len(new_matches[keys[tmp_index]][tmp_index2][1])) and max(
+                        len(new_matches[keys[i]][i2][0]), len(new_matches[keys[i]][i2][1])) > max(
+                            len(new_matches[keys[tmp_index]][tmp_index2][0]), len(new_matches[keys[tmp_index]][tmp_index2][1])):
+                        tmp_index = i
+                        tmp_index2 = i2
+            inconsistent_items.append([tmp_index, tmp_index2])
 
-            inconsistentMatches = [match for match in inconsistentMatches if ((match[0] != inconsistentItems[-1][0] or match[2] != inconsistentItems[-1][1]) and \
-                    (match[1] != inconsistentItems[-1][0] or match[3] != inconsistentItems[-1][1]))]
+            inconsistent_matches = [match for match in inconsistent_matches if (
+                    (match[0] != inconsistent_items[-1][0] or match[2] != inconsistent_items[-1][1]) and (
+                        match[1] != inconsistent_items[-1][0] or match[3] != inconsistent_items[-1][1]))]
 
-        inconsistentItems.sort(key = lambda x: x[1], reverse = True)
+        inconsistent_items.sort(key=lambda x: x[1], reverse=True)
 
-        for i in range(len(inconsistentItems)):
-            del newMatches[keys[inconsistentItems[i][0]]][inconsistentItems[i][1]]
+        for i in range(len(inconsistent_items)):
+            del new_matches[keys[inconsistent_items[i][0]]][inconsistent_items[i][1]]
 
-        for key in newMatches:
-            if key in previousMatches:
-                previousMatches[key] += newMatches[key]
-            elif len(newMatches[key]) != 0:
-                previousMatches[key] = newMatches[key]
+        for key in new_matches:
+            if key in previous_matches:
+                previous_matches[key] += new_matches[key]
+            elif len(new_matches[key]) != 0:
+                previous_matches[key] = new_matches[key]
 
-        return previousMatches
+        return previous_matches
 
     # This method matches the lists of all list nodes
-    def matchLists(self, minSimilarity):
-        debugMode = False
+    def match_lists(self, min_similarity):
+        debug_mode = False
 
-        nodes = self.getListNodes() # Get all nodes which have a list as elements
-        valueList = [] # List of the values of the elementlists
-        indicesList = [] # List of the assigned indices of the valueList
+        nodes = self.get_list_nodes()  # Get all nodes which have a list as elements
+        value_list = []  # List of the values of the elementlists
+        indices_list = []  # List of the assigned indices of the value_list
 
-        # initialises and merges the value- and indicesList
+        # initialises and merges the value- and indices_list
         for i in range(len(nodes)):
-            for j in range(len(valueList)):
-                if len([True for element in nodes[i].element if element in valueList[j]]) / min(len(nodes[i].element), len(valueList[j])) > minSimilarity:
-                    if debugMode:
-                        print('Merge list %s with list %s'%(nodes[i].element, valueList[j]))
+            for j in range(len(value_list)):
+                if len([True for element in nodes[i].element if element in value_list[j]]) / min(len(nodes[i].element), len(
+                        value_list[j])) > min_similarity:
+                    if debug_mode:
+                        print('Merge list %s with list %s' % (nodes[i].element, value_list[j]))
 
-                    indicesList.append(j)
+                    indices_list.append(j)
                     for element in nodes[i].element:
-                        if element not in valueList[j]:
-                            valueList[j].append(element)
+                        if element not in value_list[j]:
+                            value_list[j].append(element)
 
-                    if debugMode:
-                        print('Result: %s'%(valueList[j]))
+                    if debug_mode:
+                        print('Result: %s' % (value_list[j]))
                     break
 
             # Add new values if they do not fit with any previous one
-            if len(indicesList) < i+1:
-                indicesList.append(len(valueList))
-                valueList.append(nodes[i].element)
+            if len(indices_list) < i + 1:
+                indices_list.append(len(value_list))
+                value_list.append(nodes[i].element)
 
-        if debugMode:
-            print('IndicesList: %s'%indicesList)
-            print('ValueList: %s'%valueList)
+        if debug_mode:
+            print('IndicesList: %s' % indices_list)
+            print('ValueList: %s' % value_list)
 
         # Check if the value lists can be further merged together
-        notStableIndices = list(range(len(valueList)))
-        while len(notStableIndices) > 0:
-            if debugMode:
-                print('notStableIndices: %s'%notStableIndices)
+        not_stable_indices = list(range(len(value_list)))
+        while len(not_stable_indices) > 0:
+            if debug_mode:
+                print('not_stable_indices: %s' % not_stable_indices)
 
-            isStable = True
-            for i in range(1, len(valueList)):
-                if i != notStableIndices[0] and type(valueList[i]) == list and \
-                        len([True for element in valueList[i] if element in valueList[notStableIndices[0]]]) / min(len(valueList[i]), len(valueList[notStableIndices[0]])) > minSimilarity:
-                    if debugMode:
-                        print('Merge list %s with list %s'%(valueList[notStableIndices[0]], valueList[i]))
+            is_stable = True
+            for i in range(1, len(value_list)):
+                if i != not_stable_indices[0] and type(value_list[i]) is list and len(
+                        [True for element in value_list[i] if element in value_list[not_stable_indices[0]]]) / min(
+                        len(value_list[i]), len(value_list[not_stable_indices[0]])) > min_similarity:
+                    if debug_mode:
+                        print('Merge list %s with list %s' % (value_list[not_stable_indices[0]], value_list[i]))
 
                     # Extend the values
-                    for element in valueList[i]:
-                        if element not in valueList[notStableIndices[0]]:
-                            valueList[notStableIndices[0]].append(element)
+                    for element in value_list[i]:
+                        if element not in value_list[not_stable_indices[0]]:
+                            value_list[not_stable_indices[0]].append(element)
 
-                    isStable = False
-                    valueList[i] = notStableIndices[0]
-                    if i in notStableIndices:
-                        del notStableIndices[notStableIndices.index(i)]
+                    is_stable = False
+                    value_list[i] = not_stable_indices[0]
+                    if i in not_stable_indices:
+                        del not_stable_indices[not_stable_indices.index(i)]
                     break
 
-            if isStable:
-                del notStableIndices[0]
+            if is_stable:
+                del not_stable_indices[0]
 
-        if debugMode:
-            print('IndicesList after merging: %s'%indicesList)
-            print('ValueList: %s'%valueList)
+        if debug_mode:
+            print('IndicesList after merging: %s' % indices_list)
+            print('ValueList: %s' % value_list)
 
         # Assign the new expanded lists
         for i in range(len(nodes)):
-            index = indicesList[i]
-            while type(valueList[index]) != list:
-                index = valueList[index]
-            nodes[i].element = valueList[index]
-
-        return
+            index = indices_list[i]
+            while type(value_list[index]) != list:
+                index = value_list[index]
+            nodes[i].element = value_list[index]
 
     # This method returns a list of the nodes, which are lists
-    def getListNodes(self):
-        nodeList = []
+    def get_list_nodes(self):
+        node_list = []
 
-        if self.isList:
-            nodeList = [self]
+        if self.is_list:
+            node_list = [self]
 
         for child in self.children:
-            nodeList += child.getListNodes()
+            node_list += child.get_list_nodes()
 
-        return nodeList
+        return node_list
 
     # This function checks if the the two pairs would result in a incosistency if both would be matched.
     # Inconsistencies are pairings, which would result in a violation of the predecessor-successor like [[1], [0,1]], [[1,1], [0]]
-    def isConsistent(self, pair1, pair2):
+    def is_consistent(self, pair1, pair2):
 
         # Cases one entry is equal
         if pair1[0] == pair2[0]:
@@ -1098,8 +1133,8 @@ class Node:
                 return False
 
         # Cases the list includes a predecessor/successor of pair1[1] but not of pair[0]
-        elif pair1[1] == pair2[0][:len(pair1[1])] or pair1[1] == pair2[1][:len(pair1[1])] or \
-                pair1[1][:len(pair2[0])] == pair2[0] or pair1[1][:len(pair2[1])] == pair2[1]:
+        elif pair1[1] == pair2[0][:len(pair1[1])] or pair1[1] == pair2[1][:len(pair1[1])] or pair1[1][:len(pair2[0])] == pair2[0] or pair1[
+            1][:len(pair2[1])] == pair2[1]:
             return False
 
         # No found predecessor/successorrelation
@@ -1107,93 +1142,93 @@ class Node:
             return True
 
     # This function merges the node self with node. The set of the matches includes the matched nodes in the subtrees.
-    def mergeSubtreeMatches(self, node, matches, pos0, pos1, firstMerge = True):
-        debugMode = False
+    def merge_subtree_matches(self, node, matches, pos0, pos1, first_merge=True):
+        debug_mode = False
 
         # Get the pairs without the element-values
-        if type(matches) == dict:
-            newPreviousMatches = []
+        if type(matches) is dict:
+            new_previous_matches = []
             for key in matches:
-                newPreviousMatches += matches[key]
-            matches = newPreviousMatches
+                new_previous_matches += matches[key]
+            matches = new_previous_matches
             matches.sort()
 
-        if matches == []:
-            self.mergeSubtrees(node)
+        if not matches:
+            self.merge_subtrees(node)
 
-        else: # matches != []
-            [nextMatches, nextSubtrees] = self.nextMatches(matches, pos0, pos1)
-            if debugMode:
-                print('nextMatches: %s \nnextSubtrees: %s'%(nextMatches, nextSubtrees))
+        else:  # matches != []
+            [next_matches, next_subtrees] = self.next_matches(matches, pos0)
+            if debug_mode:
+                print('next_matches: %s \nnext_subtrees: %s' % (next_matches, next_subtrees))
 
-            for i in range(len(nextMatches)):
-                if debugMode:
+            for i in range(len(next_matches)):
+                if debug_mode:
                     print('\n\n\n')
-                    print('Follow the path %s from node %s'%(nextMatches[i][0][len(pos0):], self.element))
+                    print('Follow the path %s from node %s' % (next_matches[i][0][len(pos0):], self.element))
                     print('Element 1:', self.element)
                     print('Element 2:', node.element)
-                    print('Path 1:', nextMatches[i][0], pos0)
-                    print('Path 2:', nextMatches[i][1], pos1)
+                    print('Path 1:', next_matches[i][0], pos0)
+                    print('Path 2:', next_matches[i][1], pos1)
 
-                self.mergeToSinglePath(node, nextMatches[i], nextMatches, pos0, pos1)
+                self.merge_to_single_path(node, next_matches[i], next_matches, pos0, pos1)
 
-                self.followPath(nextMatches[i][0][len(pos0):]).mergeSubtreeMatches(node.followPath(nextMatches[i][1][len(pos1):]), nextSubtrees[i], nextMatches[i][0], nextMatches[i][1], firstMerge = False)
+                self.follow_path(next_matches[i][0][len(pos0):]).merge_subtree_matches(
+                    node.follow_path(next_matches[i][1][len(pos1):]), next_subtrees[i], next_matches[i][0], next_matches[i][1],
+                    first_merge=False)
 
-            if firstMerge:
+            if first_merge:
                 # Merge endnodes and adding the optional nodes of node to self
-                for tupple in self.mergeTupple:
-                    if debugMode:
+                for tuple1 in self.merge_tuple:
+                    if debug_mode:
                         print('Tupple:')
-                        print('0\n', tupple[0])
-                        print('1\n', tupple[1])
-                        print('2\n', tupple[2])
-                        print('3\n', tupple[3])
-                        print('4\n', tupple[4])
+                        print('0\n', tuple1[0])
+                        print('1\n', tuple1[1])
+                        print('2\n', tuple1[2])
+                        print('3\n', tuple1[3])
+                        print('4\n', tuple1[4])
 
-                    if tupple[1] in tupple[0].children:
-                        tupple[1].mergeNode(tupple[4])
+                    if tuple1[1] in tuple1[0].children:
+                        tuple1[1].merge_node(tuple1[4])
 
-                        [newNode, newEndNode] = tupple[2].deepCopy(tupple[3])
-                        tupple[2] = newNode
-                        tupple[3] = newEndNode
+                        [new_node, new_end_node] = tuple1[2].deepcopy(tuple1[3])
+                        tuple1[2] = new_node
+                        tuple1[3] = new_end_node
 
                         # Check cases that can appear if the paths are not disjunkt
-                        if tupple[2] not in tupple[0].children:
-                            tupple[3].children = [tupple[1]]
-                            tupple[1].parent = tupple[3]
+                        if tuple1[2] not in tuple1[0].children:
+                            tuple1[3].children = [tuple1[1]]
+                            tuple1[1].parent = tuple1[3]
                         else:
-                            tupple[3].children.append(tupple[1])
-                            tupple[1].parent = tupple[3]
+                            tuple1[3].children.append(tuple1[1])
+                            tuple1[1].parent = tuple1[3]
 
-                        del tupple[0].children[tupple[0].children.index(tupple[1])]
+                        del tuple1[0].children[tuple1[0].children.index(tuple1[1])]
 
-                        if tupple[2] not in tupple[0].children:
-                            tupple[0].children.append(tupple[2])
-                            tupple[2].parent = tupple[0]
+                        if tuple1[2] not in tuple1[0].children:
+                            tuple1[0].children.append(tuple1[2])
+                            tuple1[2].parent = tuple1[0]
 
-                        # Check if the optional part is already present in optionalNodePairs
-                        if [tupple[2], tupple[1]] not in self.optionalNodePairs:
-                            node.optionalNodePairs.append([tupple[2], tupple[1]])
-                self.mergeTupple.clear()
-
-        return
+                        # Check if the optional part is already present in optional_node_pairs
+                        if [tuple1[2], tuple1[1]] not in self.optional_node_pairs:
+                            node.optional_node_pairs.append([tuple1[2], tuple1[1]])
+                self.merge_tuple.clear()
 
     # This method merges two nodes, without matches and merges the variable nodes if present.
-    def mergeSubtrees(self, node):
-        self.mergeNode(node)
+    def merge_subtrees(self, node):
+        self.merge_node(node)
 
         if len(self.children) == 0:
             self.end = True
 
         for i in range(len(node.children)):
-            if node.children[i].isVariable:
-                containsVariable = False
+            if node.children[i].is_variable:
+                contains_variable = False
                 for child in self.children:
-                    if child.isVariable:
-                        containsVariable = True
-                        child.mergeSubtrees(node.children[i])
+                    if child.is_variable:
+                        contains_variable = True
+                        child.merge_subtrees(node.children[i])
                         break
-                if not containsVariable:
+                if not contains_variable:
                     self.children.append(node.children[i])
                     node.children[i].parent = self
             else:
@@ -1201,7 +1236,7 @@ class Node:
                 node.children[i].parent = self
 
     # This method returns a list, which contains the next matches and the corresponding matches in their subtrees
-    def nextMatches(self, matches, pos0, pos1):
+    def next_matches(self, matches, pos0):
 
         if len(matches) == 0 or len(matches) == 1 and matches[0][0] == pos0:
             return [[], []]
@@ -1209,135 +1244,143 @@ class Node:
         if matches[0][0] == pos0:
             del matches[0]
 
-        nextMatches = [matches[0]] # Next matches
-        nextSubtrees = [[]] # List of the subtrees of the nodes to the next matches
+        next_matches = [matches[0]]  # Next matches
+        next_subtrees = [[]]  # List of the subtrees of the nodes to the next matches
 
-        for i in range(1,len(matches)):
-            if nextMatches[-1][0] != matches[i][0][:len(nextMatches[-1][0])]:
-                nextMatches.append(matches[i])
-                nextSubtrees.append([])
+        for i in range(1, len(matches)):
+            if next_matches[-1][0] != matches[i][0][:len(next_matches[-1][0])]:
+                next_matches.append(matches[i])
+                next_subtrees.append([])
             else:
-                nextSubtrees[-1].append(matches[i])
+                next_subtrees[-1].append(matches[i])
 
-        return [nextMatches, nextSubtrees]
+        return [next_matches, next_subtrees]
 
     # This method returns the successor node, which is reached after following the path
-    def followPath(self, path):
+    def follow_path(self, path):
         node = self
         for i in range(len(path)):
             node = node.children[path[i]]
         return node
 
     # This method merges two paths into one and adds the additional branches
-    def mergeToSinglePath(self, node, pair, nextMatches, pos0, pos1):
-        debugMode = False
+    def merge_to_single_path(self, node, pair, next_matches, pos0, pos1):
+        debug_mode = False
 
         # Merge nodes
-        self.mergeNode(node)
+        self.merge_node(node)
 
         # Add not matched branch children of node to self
         for i in range(len(node.children)):
-            if not any(pos1+[i] == pos[1][:len(pos1)+1] for pos in nextMatches) and node.children[i] not in self.children:
-                if debugMode:
-                    print('Added branch: %s (Path: %s)'%(node.children[i].element, pos1+[i]))
+            if not any(pos1 + [i] == pos[1][:len(pos1) + 1] for pos in next_matches) and node.children[i] not in self.children:
+                if debug_mode:
+                    print('Added branch: %s (Path: %s)' % (node.children[i].element, pos1 + [i]))
 
-                if node.children[i].isVariable:
-                    containsVariable = False
+                if node.children[i].is_variable:
+                    contains_variable = False
                     for child in self.children:
-                        if child.isVariable:
-                            containsVariable = True
-                            child.mergeSubtrees(node.children[i])
+                        if child.is_variable:
+                            contains_variable = True
+                            child.merge_subtrees(node.children[i])
                             break
-                    if not containsVariable:
+                    if not contains_variable:
                         self.children.append(node.children[i])
                         node.children[i].parent = self
-                            
+
                 else:
                     self.children.append(node.children[i])
                     node.children[i].parent = self
 
-        tmpSelf = self
-        tmpNode = node
+        tmp_self = self
+        tmp_node = node
 
-        for i in range(min(len(pair[0])-len(pos0), len(pair[1])-len(pos1))-1):
-            tmpSelf = tmpSelf.followPath([pair[0][len(pos0)+i]])
-            tmpNode = tmpNode.followPath([pair[1][len(pos1)+i]])
-            if debugMode:
-                print('Match %s with %s'%(tmpSelf.element, tmpNode.element))
+        for i in range(min(len(pair[0]) - len(pos0), len(pair[1]) - len(pos1)) - 1):
+            tmp_self = tmp_self.followPath([pair[0][len(pos0) + i]])
+            tmp_node = tmp_node.followPath([pair[1][len(pos1) + i]])
+            if debug_mode:
+                print('Match %s with %s' % (tmp_self.element, tmp_node.element))
 
             # Merge the nodes because they lie on the matched path
-            # print('%s-%s'%(tmpSelf.element, tmpNode.element))
-            tmpSelf.mergeNode(tmpNode)
+            # print('%s-%s'%(tmp_self.element, tmp_node.element))
+            tmp_self.merge_node(tmp_node)
 
             # Add not matched branch children
-            for j in range(len(tmpNode.children)):
-                if not any(pair[1][:len(pos1)+i+1]+[j] == tmpPos[1][:len(pos1)+i+2] for tmpPos in nextMatches) and tmpNode.children[j] not in tmpSelf.children:
-                    if debugMode:
-                        print('Added branch: %s (Path: %s)'%(tmpNode.children[j].element, pair[1][:len(pos1)+i+1]+[j]))
+            for j in range(len(tmp_node.children)):
+                if not any(pair[1][:len(pos1) + i + 1] + [j] == tmpPos[1][:len(pos1) + i + 2] for tmpPos in next_matches) and \
+                        tmp_node.children[j] not in tmp_self.children:
+                    if debug_mode:
+                        print('Added branch: %s (Path: %s)' % (tmp_node.children[j].element, pair[1][:len(pos1) + i + 1] + [j]))
 
-                    if tmpNode.children[j].isVariable:
-                        containsVariable = False
-                        for child in tmpSelf.children:
-                            if child.isVariable:
-                                containsVariable = True
-                                child.mergeSubtrees(tmpNode.children[j])
+                    if tmp_node.children[j].is_variable:
+                        contains_variable = False
+                        for child in tmp_self.children:
+                            if child.is_variable:
+                                contains_variable = True
+                                child.merge_subtrees(tmp_node.children[j])
                                 break
-                        if not containsVariable:
-                            tmpSelf.children.append(tmpNode.children[j])
-                            tmpNode.children[j].parent = tmpSelf
+                        if not contains_variable:
+                            tmp_self.children.append(tmp_node.children[j])
+                            tmp_node.children[j].parent = tmp_self
 
                     else:
-                        tmpSelf.children.append(tmpNode.children[j])
-                        tmpNode.children[j].parent = tmpSelf
+                        tmp_self.children.append(tmp_node.children[j])
+                        tmp_node.children[j].parent = tmp_self
 
-        if len(pair[0])-len(pos0) < len(pair[1])-len(pos1):
-            if debugMode:
+        if len(pair[0]) - len(pos0) < len(pair[1]) - len(pos1):
+            if debug_mode:
                 print('Add nodes of node to self and make them optional')
                 print(len(pair[1]), len(pos1), len(pair[0]), len(pos0))
-                print(pair[1][len(pos1):len(pos1)+len(pair[0])-len(pos0)], len(pair[1][len(pos1):len(pos1)+len(pair[0])-len(pos0)]))
+                print(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0)], len(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0)]))
                 print(pair[1][len(pos1):], len(pair[1][len(pos1):]))
-                print('Last unmatched: %s - %s'%(str(node.followPath(pair[1][len(pos1):len(pos1)+len(pair[0])-len(pos0)-2]).element) + \
-                        str(node.followPath(pair[1][len(pos1):len(pos1)+len(pair[0])-len(pos0)-1]).element), \
-                        str(self.followPath(pair[0][len(pos0):-2]).element) + str(self.followPath(pair[0][len(pos0):-1]).element)))
-                print('Optional elements: %s'%[node.followPath(pair[1][len(pos1):i]).element for i in range(len(pos1)+len(pair[0])-len(pos0), len(pair[1]))])
-                print('First optional element: %s'%node.followPath(pair[1][len(pos1):len(pos1)+len(pair[0])-len(pos0)]).element)
-                print('Next Matched: %s - %s'%(node.followPath(pair[1][len(pos1):]).element, self.followPath(pair[0][len(pos0):]).element))
+                print('Last unmatched: %s - %s' % (
+                    str(node.follow_path(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0) - 2]).element) + str(
+                        node.follow_path(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0) - 1]).element),
+                    str(self.follow_path(pair[0][len(pos0):-2]).element) + str(self.follow_path(pair[0][len(pos0):-1]).element)))
+                print('Optional elements: %s' % [node.follow_path(pair[1][len(pos1):i]).element for i in
+                    range(len(pos1) + len(pair[0]) - len(pos0), len(pair[1]))])
+                print('First optional element: %s' % node.follow_path(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0)]).element)
+                print('Next Matched: %s - %s' % (
+                    node.follow_path(pair[1][len(pos1):]).element, self.follow_path(pair[0][len(pos0):]).element))
 
             # Appending the tupple of certain nodes to be able to later insert the optional part into the parser
-            self.mergeTupple.append([self.followPath(pair[0][len(pos0):-1]), self.followPath(pair[0][len(pos0):]), \
-                    node.followPath(pair[1][len(pos1):len(pos1)+len(pair[0])-len(pos0)]), node.followPath(pair[1][len(pos1):-1]), node.followPath(pair[1][len(pos1):])])
+            self.merge_tuple.append([
+                self.follow_path(pair[0][len(pos0):-1]), self.follow_path(pair[0][len(pos0):]),
+                node.follow_path(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0)]), node.follow_path(pair[1][len(pos1):-1]),
+                node.follow_path(pair[1][len(pos1):])])
 
-        elif len(pair[0])-len(pos0) > len(pair[1])-len(pos1):
-            if debugMode:
+        elif len(pair[0]) - len(pos0) > len(pair[1]) - len(pos1):
+            if debug_mode:
                 print('Make nodes of self optional')
                 print(len(pair[0]), len(pos0), len(pair[1]), len(pos1))
-                print(pair[0][len(pos0):len(pos0)+len(pair[1])-len(pos1)], len(pair[0][len(pos0):len(pos0)+len(pair[1])-len(pos1)]))
+                print(pair[0][len(pos0):len(pos0) + len(pair[1]) - len(pos1)], len(pair[0][len(pos0):len(pos0) + len(pair[1]) - len(pos1)]))
                 print(pair[0][len(pos0):], len(pair[0][len(pos0):]))
 
-            if [self.followPath(pair[0][len(pos0):len(pos0)+len(pair[1])-len(pos1)]), self.followPath(pair[0][len(pos0):])] not in self.optionalNodePairs:
-                self.optionalNodePairs.append([self.followPath(pair[0][len(pos0):len(pos0)+len(pair[1])-len(pos1)]), self.followPath(pair[0][len(pos0):])])
+            if [self.follow_path(pair[0][len(pos0):len(pos0) + len(pair[1]) - len(pos1)]),
+                    self.follow_path(pair[0][len(pos0):])] not in self.optional_node_pairs:
+                self.optional_node_pairs.append(
+                    [self.follow_path(pair[0][len(pos0):len(pos0) + len(pair[1]) - len(pos1)]), self.follow_path(pair[0][len(pos0):])])
 
     # This method changes the attributes of self to allow matching of both self and node
-    def mergeNode(self, node):
+    def merge_node(self, node):
         self.datatype = [typ for typ in self.datatype if typ in node.datatype]
 
         # Updating variable/list element
-        if node.isVariable and not self.isVariable:
-            self.isVariable = True
+        if node.is_variable and not self.is_variable:
+            self.is_variable = True
             self.element = '§'
-        elif not self.isVariable:
-            if self.isList and node.isList:
+        elif not self.is_variable:
+            if self.is_list and node.is_list:
                 self.element.extend([element for element in node.element if element not in self.element])
-            elif not self.isList and node.isList:
-                self.isList = True
+            elif not self.is_list and node.is_list:
+                self.is_list = True
                 if self.element not in node.element:
                     node.element.append(self.element)
                 self.element = node.element
-            elif self.isList and not node.isList:
+            elif self.is_list and not node.is_list:
                 if node.element not in self.element:
                     self.element.append(node.element)
             elif node.element != self.element:
-                self.isList = True
+                self.is_list = True
                 self.element = [self.element, node.element]
 
         # Update line end
@@ -1345,250 +1388,269 @@ class Node:
             self.end = True
 
         # Update optional node endings
-        if any(node in pair for pair in self.optionalNodePairs):
-            for i in range(len(self.optionalNodePairs)):
-                if node == self.optionalNodePairs[i][0]:
-                    self.optionalNodePairs[i][0] = self
-                if node == self.optionalNodePairs[i][1]:
-                    self.optionalNodePairs[i][1] = self
+        if any(node in pair for pair in self.optional_node_pairs):
+            for i in range(len(self.optional_node_pairs)):
+                if node == self.optional_node_pairs[i][0]:
+                    self.optional_node_pairs[i][0] = self
+                if node == self.optional_node_pairs[i][1]:
+                    self.optional_node_pairs[i][1] = self
 
     # This function finds subtrees in the parser and return the IDs of the root nodes
     # Parseretrees with multiple parents are not supported (Remove matchedSubtreeIndices + Save number of includions in subtrees)
-    def getSubtrees(self, minHeight):
-        debugMode = False
-        subtreeList = [node for node in self.getLeaves()]
-        tmpDict = {}
+    def get_subtrees(self, min_height):
+        debug_mode = False
+        subtree_list = [node for node in self.get_leaves()]
+        tmp_dict = {}
 
-        tmpIndex = 0
-        tmpList = [] # List of the list elements
-        tmpNodeList = [] # List of the corresponding nodes
-        for i in range(len(subtreeList)):
-            if type(subtreeList[i].element) == list:
-                if subtreeList[i].element in tmpList:
-                    tmpNodeList[tmpList.index(subtreeList[i].element)].append(i)
+        tmp_list = []  # List of the list elements
+        tmp_node_list = []  # List of the corresponding nodes
+        for i in range(len(subtree_list)):
+            if type(subtree_list[i].element) is list:
+                if subtree_list[i].element in tmp_list:
+                    tmp_node_list[tmp_list.index(subtree_list[i].element)].append(i)
                 else:
-                    tmpList.append(subtreeList[i].element)
-                    tmpNodeList.append([i])
+                    tmp_list.append(subtree_list[i].element)
+                    tmp_node_list.append([i])
             else:
-                if subtreeList[i].element in tmpDict:
-                    tmpDict[subtreeList[i].element].append(i)
+                if subtree_list[i].element in tmp_dict:
+                    tmp_dict[subtree_list[i].element].append(i)
                 else:
-                    tmpDict[subtreeList[i].element] = [i]
+                    tmp_dict[subtree_list[i].element] = [i]
 
-        subtreeList = [[subtreeList[k] for k in tmpDict[key]] for key in tmpDict] + [[subtreeList[k] for k in tmpNodeList[k2]] for k2 in range(len(tmpNodeList))] # List of roots of equal subtrees
-        heightList = [0, len(subtreeList)]
+        subtree_list = [[subtree_list[k] for k in tmp_dict[key]] for key in tmp_dict] + [
+            [subtree_list[k] for k in tmp_node_list[k2]] for k2 in range(len(tmp_node_list))]  # List of roots of equal subtrees
+        height_list = [0, len(subtree_list)]
 
-        if debugMode:
-            print([[str(subtree[k].parent.element)+str(subtree[k].element) for k in range(len(subtree))] for subtree in subtreeList])
+        if debug_mode:
+            print([[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in subtree_list])
 
         while True:
-            for i in range(heightList[-2], heightList[-1]):
-                matchedSubtreeIndices = [] # List of the indices of the subtreetypes, which have already been matched
-                for j in range(len(subtreeList[i])):
+            for i in range(height_list[-2], height_list[-1]):
+                matched_subtree_indices = []  # List of the indices of the subtreetypes, which have already been matched
+                for j in range(len(subtree_list[i])):
 
                     # Check if the subtree has already been matched
-                    if j in matchedSubtreeIndices:
+                    if j in matched_subtree_indices:
                         continue
 
-                    if debugMode and subtreeList[i][j].parent.parent.element != None:
-                        print('Try to match: %s of %s'%(str(subtreeList[i][j].element), str(subtreeList[i][j].parent.parent.element)+str(subtreeList[i][j].parent.element)+str(subtreeList[i][j].element)))
+                    if debug_mode and subtree_list[i][j].parent.parent.element is not None:
+                        print('Try to match: %s of %s' % (str(subtree_list[i][j].element), str(
+                            subtree_list[i][j].parent.parent.element) + str(subtree_list[i][j].parent.element) + str(
+                            subtree_list[i][j].element)))
 
-                    childrenIndex = []
-                    allChildrenMatched = True
-                    for child in subtreeList[i][j].parent.children:
-                        if child == subtreeList[i][j]:
-                            childrenIndex.append(i)
+                    children_index = []
+                    all_children_matched = True
+                    for child in subtree_list[i][j].parent.children:
+                        if child == subtree_list[i][j]:
+                            children_index.append(i)
                             continue
 
-                        childMatch = False
-                        for i2 in range(heightList[-1]):
-                            if child in subtreeList[i2]:
-                                childMatch = True
-                                childrenIndex.append(i2)
+                        child_match = False
+                        for i2 in range(height_list[-1]):
+                            if child in subtree_list[i2]:
+                                child_match = True
+                                children_index.append(i2)
                                 break
 
-                        if not childMatch:
-                            allChildrenMatched = False
+                        if not child_match:
+                            all_children_matched = False
                             break
 
-                    if not allChildrenMatched:
-                        if debugMode:
+                    if not all_children_matched:
+                        if debug_mode:
                             print('At least one child could not be matched')
                     # Search for another subtree, which is equal to the indiced subtree of self.parent
-                    if allChildrenMatched:
-                        if debugMode:
+                    if all_children_matched:
+                        if debug_mode:
                             print('Try to find a similar subtree')
-                        firstMatch = True
-                                
-                        indicesList = [] # List of the indices, which are used to remove the other matched subtrees
-                        parentsList = [subtreeList[i][j].parent] # List of the parents of matched subtrees
 
-                        for j2 in range(j+1, len(subtreeList[i])):
+                        indices_list = []  # List of the indices, which are used to remove the other matched subtrees
+                        parents_list = [subtree_list[i][j].parent]  # List of the parents of matched subtrees
+
+                        for j2 in range(j + 1, len(subtree_list[i])):
                             # Check if the subtree has already been matched
-                            if j2 in matchedSubtreeIndices:
+                            if j2 in matched_subtree_indices:
                                 continue
 
-                            if subtreeList[i][j].parent.element == subtreeList[i][j2].parent.element and len(subtreeList[i][j].parent.children) == len(subtreeList[i][j2].parent.children):
-                                allChildrenMatched = True
+                            if subtree_list[i][j].parent.element == subtree_list[i][j2].parent.element and len(
+                                    subtree_list[i][j].parent.children) == len(subtree_list[i][j2].parent.children):
+                                all_children_matched = True
 
-                                if debugMode:
+                                if debug_mode:
                                     print('Check if all children are equal to the reference children')
                                 # Checks if the children are the same subtrees. This works because the braches are ordered
-                                for i2 in range(len(subtreeList[i][j2].parent.children)):
-                                    if subtreeList[i][j2].parent.children[i2] == subtreeList[i][j2]:
+                                for i2 in range(len(subtree_list[i][j2].parent.children)):
+                                    if subtree_list[i][j2].parent.children[i2] == subtree_list[i][j2]:
                                         continue
-                                    elif subtreeList[i][j2].parent.children[i2] in subtreeList[childrenIndex[i2]]:
+                                    elif subtree_list[i][j2].parent.children[i2] in subtree_list[children_index[i2]]:
                                         continue
                                     else:
-                                        allChildrenMatched = False
+                                        all_children_matched = False
                                         break
 
-                                # If the subtree matches the reference, add the neighbors to the indicesList
-                                if allChildrenMatched:
-                                    parentsList.append(subtreeList[i][j2].parent)
-                                    matchedSubtreeIndices.append(j2)
+                                # If the subtree matches the reference, add the neighbors to the indices_list
+                                if all_children_matched:
+                                    parents_list.append(subtree_list[i][j2].parent)
+                                    matched_subtree_indices.append(j2)
 
-                                    for i2 in range(len(subtreeList[i][j2].parent.children)):
-                                        if debugMode:
-                                            print('Check if children is in the same subtreeList as the other')
-                                        if i != childrenIndex[i2]:
-                                            indicesList.append([childrenIndex[i2],subtreeList[childrenIndex[i2]].index(subtreeList[i][j2].parent.children[i2])])
-                                            #print('Add 1: %s'%[childrenIndex[i2],subtreeList[childrenIndex[i2]].index(subtreeList[i][j2].parent.children[i2])])
+                                    for i2 in range(len(subtree_list[i][j2].parent.children)):
+                                        if debug_mode:
+                                            print('Check if children is in the same subtree_list as the other')
+                                        if i != children_index[i2]:
+                                            indices_list.append([children_index[i2], subtree_list[children_index[i2]].index(
+                                                subtree_list[i][j2].parent.children[
+                                                    i2])])
+                                            # print('Add 1: %s'%[children_index[i2],subtree_list[children_index[i2]].index(
+                                            # subtree_list[i][j2].parent.children[i2])])
 
-                        if len(parentsList) > 1:
-                            if debugMode:
-                                print('ParentList: %s'%[str(parentsList[k].parent.element)+str(parentsList[k].element) for k in range(len(parentsList))])
-                            matchedSubtreeIndices.append(j)
+                        if len(parents_list) > 1:
+                            if debug_mode:
+                                print('ParentList: %s' % [str(parents_list[k].parent.element) + str(
+                                    parents_list[k].element) for k in range(len(parents_list))])
+                            matched_subtree_indices.append(j)
 
                             # check if the node is an variable and updates the datatype
-                            if parentsList[0].isVariable:
-                                tmpList = [typ for typ in parentsList[0].datatype if all(typ in parentsList[k].datatype for k in range(1,len(parentsList)))]
-                                for k in range(len(parentsList)):
-                                    parentsList[k].datatype = tmpList
+                            if parents_list[0].is_variable:
+                                tmp_list = [typ for typ in parents_list[0].datatype if all(
+                                    typ in parents_list[k].datatype for k in range(1, len(parents_list)))]
+                                for k in range(len(parents_list)):
+                                    parents_list[k].datatype = tmp_list
 
-                            if any(parentsList[k].end for k in range(len(parentsList))):
-                                for k in range(len(parentsList)):
-                                    parentsList[k].end = True
+                            if any(parents_list[k].end for k in range(len(parents_list))):
+                                for k in range(len(parents_list)):
+                                    parents_list[k].end = True
 
-                            # Add the neighbors of the first subtree into the indicesList
-                            for i2 in range(len(subtreeList[i][j].parent.children)):
-                                if i != childrenIndex[i2]:
-                                    indicesList.append([childrenIndex[i2],subtreeList[childrenIndex[i2]].index(subtreeList[i][j].parent.children[i2])])
-                                    #print('Add 2: %s'%[childrenIndex[i2],subtreeList[childrenIndex[i2]].index(subtreeList[i][j].parent.children[i2])])
+                            # Add the neighbors of the first subtree into the indices_list
+                            for i2 in range(len(subtree_list[i][j].parent.children)):
+                                if i != children_index[i2]:
+                                    indices_list.append([children_index[i2], subtree_list[children_index[i2]].index(
+                                        subtree_list[i][j].parent.children[
+                                            i2])])
+                                    # print('Add 2: %s'%[children_index[i2],subtree_list[children_index[i2]].index(
+                                    # subtree_list[i][j].parent.children[i2])])
 
-                            indicesList.sort(reverse = True)
-                            if debugMode:
-                                print('Remove the children from the indicesList')
-                                print([[str(subtree[k].parent.element)+str(subtree[k].element) for k in range(len(subtree))] for subtree in subtreeList])
-                                print(indicesList)
-                                print(len(subtreeList))
-                            #print(indicesList)
-                            for pair in indicesList:
-                                del subtreeList[pair[0]][pair[1]]
-                            if debugMode:
-                                print([[str(subtree[k].parent.element)+str(subtree[k].element) for k in range(len(subtree))] for subtree in subtreeList])
+                            indices_list.sort(reverse=True)
+                            if debug_mode:
+                                print('Remove the children from the indices_list')
+                                print(
+                                    [[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in
+                                        subtree_list])
+                                print(indices_list)
+                                print(len(subtree_list))
+                            # print(indices_list)
+                            for pair in indices_list:
+                                del subtree_list[pair[0]][pair[1]]
+                            if debug_mode:
+                                print(
+                                    [[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in
+                                        subtree_list])
 
                                 print('Add the subtrees to the subtree-list')
-                            subtreeList.append(parentsList)
-                            if debugMode:
-                                print([[str(subtree[k].parent.element)+str(subtree[k].element) for k in range(len(subtree))] for subtree in subtreeList])
+                            subtree_list.append(parents_list)
+                            if debug_mode:
+                                print(
+                                    [[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in
+                                        subtree_list])
 
-                if len(matchedSubtreeIndices) > 1:
+                if len(matched_subtree_indices) > 1:
                     # Remove the matched subtrees of the current subtree
-                    matchedSubtreeIndices.sort(reverse = True)
-                    if debugMode:
-                        print('Remove the children from the current subtreeList')
-                        print([[str(subtree[k].parent.element)+str(subtree[k].element) for k in range(len(subtree))] for subtree in subtreeList])
-                        print(i, matchedSubtreeIndices)
-                    for j in matchedSubtreeIndices:
-                        del subtreeList[i][j]
-                    if debugMode:
-                        print([[str(subtree[k].parent.element)+str(subtree[k].element) for k in range(len(subtree))] for subtree in subtreeList])
+                    matched_subtree_indices.sort(reverse=True)
+                    if debug_mode:
+                        print('Remove the children from the current subtree_list')
+                        print([[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(
+                            len(subtree))] for subtree in subtree_list])
+                        print(i, matched_subtree_indices)
+                    for j in matched_subtree_indices:
+                        del subtree_list[i][j]
+                    if debug_mode:
+                        print([[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(
+                            len(subtree))] for subtree in subtree_list])
 
             # Track the height of the subtrees
-            heightList.append(len(subtreeList))
+            height_list.append(len(subtree_list))
             # Check if new subtrees were found, or if the number of subtrees has not increased
-            if heightList[-1] == heightList[-2]:
+            if height_list[-1] == height_list[-2]:
                 break
 
-        if debugMode:
+        if debug_mode:
             print('Delete subtrees with a smaller height/subtrees with less than two entries')
-        if minHeight < len(heightList):
-            for k in range(len(subtreeList)-1,-1,-1):
-                if len(subtreeList[k]) < 2 or k < heightList[minHeight]:
-                    del subtreeList[k]
+        if min_height < len(height_list):
+            for k in range(len(subtree_list) - 1, -1, -1):
+                if len(subtree_list[k]) < 2 or k < height_list[min_height]:
+                    del subtree_list[k]
         else:
             # No Subtree has the minimum height
-            subtreeList = []
+            subtree_list = []
 
         # Add the subtrees for the optional elements
-        for pair in self.optionalNodePairs:
-            if not any(pair[1] in subtree for subtree in subtreeList):
-                subtreeList.append([pair[1]])
+        for pair in self.optional_node_pairs:
+            if not any(pair[1] in subtree for subtree in subtree_list):
+                subtree_list.append([pair[1]])
 
-        if debugMode:
+        if debug_mode:
             print('Return subtreeNodes')
-            print([[str(subtree[k].parent.element)+str(subtree[k].element) for k in range(len(subtree))] for subtree in subtreeList])
-        
-        return subtreeList
+            print([[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in subtree_list])
 
-    def getNumberOfFollowingNodes(self):
+        return subtree_list
+
+    def get_number_of_following_nodes(self):
         if len(self.children) == 0:
             return 1
         elif len(self.children) == 1:
-            return self.children[0].getNumberOfFollowingNodes() + 1
+            return self.children[0].get_number_of_following_nodes() + 1
         else:
-            sum = 0
+            sum1 = 0
             for child in self.children:
-                sum += child.getNumberOfFollowingNodes()
-            return sum + 1
+                sum1 += child.get_number_of_following_nodes()
+            return sum1 + 1
 
-    def getClusters(self):
+    def get_clusters(self):
         if len(self.children) == 0:
-            return [self.endingLineNumbers]
+            return [self.ending_line_numbers]
         elif len(self.children) == 1:
             child = self.children[0]
-            lists = child.getClusters()
+            lists = child.get_clusters()
 
             if self.end is True:
-                lists.extend([self.endingLineNumbers])
+                lists.extend([self.ending_line_numbers])
 
             return lists
         else:
             lists = []
             for child in self.children:
-                lists.extend(child.getClusters())
+                lists.extend(child.get_clusters())
             return lists
 
-    def getTemplates(self, string):
+    def get_templates(self, string):
         if self.element is not None:
-            newString = string + str(self.element)
+            new_string = string + str(self.element)
         else:
-            newString = ''
+            new_string = ''
 
         if len(self.children) == 0:
-            return [newString]
+            return [new_string]
         elif len(self.children) == 1:
             child = self.children[0]
-            list = []
+            list1 = []
 
             if self.end is True:
-                list.append(newString)
+                list1.append(new_string)
 
-            list.extend(child.getTemplates(newString))
-            return list
+            list1.extend(child.get_templates(new_string))
+            return list1
         else:
-            list = []
+            list1 = []
             for child in self.children:
-                list.extend(child.getTemplates(newString))
-            return list
+                list1.extend(child.get_templates(new_string))
+            return list1
 
     # This method builds the parser tree recursively
-    def buildTree(self, depth, log_line_dict, delimiters, theta1, theta2, theta3, theta4, theta5, theta6, damping, forceBranch, forceVar):
+    def build_tree(self, depth, log_line_dict, delimiters, theta1, theta2, theta3, theta4, theta5, theta6, damping, force_branch,
+                   force_var):
         # Theta1 is increased in every recursion, however, should be limited. If theta1 > 0.5, only 1 child would be possible
         theta1 = min(theta1, 0.49)
 
-        self.theta1 = theta1 # Store theta1 for every node, this information is printed in the textual tree
+        self.theta1 = theta1  # Store theta1 for every node, this information is printed in the textual tree
 
         # End the recursion if all lines end at this node
         if len(log_line_dict) == 0:
@@ -1596,26 +1658,26 @@ class Node:
             return
 
         # Check for multiple consecutive delimiters and combine them
-        delimiterFlag = False
+        delimiter_flag = False
         for log_line_id in log_line_dict:
             log_line = log_line_dict[log_line_id]
             if depth < len(log_line.words):
                 if log_line.words[depth] in delimiters:
-                    moreDelimiters = True
-                    delimiterFlag = True
-                    while moreDelimiters == True:
+                    more_delimiters = True
+                    delimiter_flag = True
+                    while more_delimiters:
                         if depth < len(log_line.words) - 1:
                             if log_line.words[depth + 1] in delimiters:
                                 log_line.words[depth] += log_line.words[depth + 1]
                                 del log_line.words[depth + 1]
                             else:
-                                moreDelimiters = False
+                                more_delimiters = False
                         else:
-                            moreDelimiters = False
+                            more_delimiters = False
 
         words = []
-        list = []
-        listFailedElem = [] # List of the log lines, which do not end and are not in list
+        list1 = []
+        list_failed_elem = []  # List of the log lines, which do not end and are not in list
         # Assemble a list of words of all log lines that pass over this node
         for log_line_id in log_line_dict:
             log_line = log_line_dict[log_line_id]
@@ -1624,147 +1686,164 @@ class Node:
 
         counter = Counter(words)
 
-        sumFrequency = 0
-        sumFrequency2 = 0 # Sum of the frequency of log lines, which did not surpass theta1
-        maxCount = -1
+        sum_frequency = 0
+        sum_frequency2 = 0  # Sum of the frequency of log lines, which did not surpass theta1
+        max_count = -1
         for elem in counter:
-            maxCount = max(maxCount, counter[elem])
+            max_count = max(max_count, counter[elem])
             # Determine the potential succeeding nodes, i.e., words that make up a high fraction of all words
-            if counter[elem] / float(len(log_line_dict)) >= theta1 or depth in forceBranch:
-                sumFrequency += counter[elem] # sumFrequency is needed in Case 3
-                list.append(elem)
+            if counter[elem] / float(len(log_line_dict)) >= theta1 or depth in force_branch:
+                sum_frequency += counter[elem]  # sum_frequency is needed in Case 3
+                list1.append(elem)
             else:
-                sumFrequency2 += counter[elem]
-                listFailedElem.append(elem)
+                sum_frequency2 += counter[elem]
+                list_failed_elem.append(elem)
 
-        newNode = Node(self.optionalNodePairs, self.mergeTupple)
-        newNode.determine_datatype(words)
-        specialDatatype = False
-        if depth not in forceBranch: # Branches can be forced also on special data types
-            for dt in newNode.datatype:
+        new_node = Node(self.optional_node_pairs, self.merge_tuple)
+        new_node.determine_datatype(words)
+        special_datatype = False
+        if depth not in force_branch:  # Branches can be forced also on special data types
+            for dt in new_node.datatype:
                 if dt in ['integer', 'float', 'datetime', 'ipaddress', 'base64', 'hex']:
-                    specialDatatype = True
+                    special_datatype = True
 
-        # Always do a variable if all branches are unique, i.e., maxCount == 1
+        # Always do a variable if all branches are unique, i.e., max_count == 1
         # Also, never do a variable for delimiters
-        if delimiterFlag == False and (len(list) == 0 or specialDatatype or depth in forceVar):
+        if not delimiter_flag and (len(list1) == 0 or special_datatype or depth in force_var):
             # Case 1
-            newNode.element = '§'
-            newNode.isVariable = True
-            newNode.parent = self
-            self.children.append(newNode)
+            new_node.element = '§'
+            new_node.is_variable = True
+            new_node.parent = self
+            self.children.append(new_node)
             new_dict = {}
-            endingLines = 0
+            ending_lines = 0
             # Determine log lines passing to next node(s) that will be analyzed in the next recursion
             for log_line_id in log_line_dict:
                 log_line = log_line_dict[log_line_id]
                 if depth < len(log_line.words) - 1:
-                    new_dict[log_line_id] = log_line # Log line has more words, give it to next node
+                    new_dict[log_line_id] = log_line  # Log line has more words, give it to next node
                 elif depth == len(log_line.words) - 1:
-                    endingLines += 1 # Log line ends at this node
-                    #newNode.endingLineNumbers.append(log_line_id) # For Evaluation, comment out if not needed
-            newNode.occurrence = len(log_line_dict) # It is a variable node, so all log lines received from parent node in previous step occur here
-            if endingLines / float(self.occurrence) >= theta4:
-                newNode.end = True
-                newNode.endingLines = endingLines
-            if depth not in forceBranch and len(new_dict) / float(self.occurrence) < theta5: # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e., no lines are passed to the next node
+                    ending_lines += 1
+                    # Log line ends at this node
+                    # new_node.ending_line_numbers.append(log_line_id)
+                    # For Evaluation, comment out if not needed
+            new_node.occurrence = len(
+                log_line_dict)  # It is a variable node, so all log lines received from parent node in previous step occur here
+            if ending_lines / float(self.occurrence) >= theta4:
+                new_node.end = True
+                new_node.ending_lines = ending_lines
+            if depth not in force_branch and len(new_dict) / float(self.occurrence) < theta5:
+                # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e.,
+                # no lines are passed to the next node
                 new_dict = {}
-            if newNode.occurrence != 0:
-                newNode.theta1 = self.theta1 * (1 + (1 - newNode.occurrence / float(self.occurrence)) * damping)
-            newNode.buildTree(depth + 1, new_dict, delimiters, newNode.theta1, theta2, theta3, theta4, theta5, theta6, damping, forceBranch, forceVar)
-        elif len(list) == 1:
+            if new_node.occurrence != 0:
+                new_node.theta1 = self.theta1 * (1 + (1 - new_node.occurrence / float(self.occurrence)) * damping)
+            new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
+                                force_branch, force_var)
+        elif len(list1) == 1:
             # Case 2
-            if counter[list[0]] / float(len(log_line_dict)) >= theta2 or delimiterFlag == True:
+            if counter[list1[0]] / float(len(log_line_dict)) >= theta2 or delimiter_flag == True:
                 # Case 2 a)
-                newNode.element = list[0]
-                newNode.parent = self
-                self.children.append(newNode)
+                new_node.element = list1[0]
+                new_node.parent = self
+                self.children.append(new_node)
                 new_dict = {}
                 occurrences = 0
-                endingLines = 0
+                ending_lines = 0
                 for log_line_id in log_line_dict:
                     log_line = log_line_dict[log_line_id]
-                    if log_line.words[depth] == list[0]:
+                    if log_line.words[depth] == list1[0]:
                         occurrences += 1
                         if depth < len(log_line.words) - 1:
                             new_dict[log_line_id] = log_line
                         elif depth == len(log_line.words) - 1:
-                            endingLines += 1
-                            #newNode.endingLineNumbers.append(log_line_id) # For Evaluation, comment out if not needed
-                newNode.occurrence = occurrences
-                if endingLines / float(self.occurrence) >= theta4:
-                    newNode.end = True
-                    newNode.endingLines = endingLines
-                if depth not in forceBranch and len(new_dict) / float(self.occurrence) < theta5:  # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e., no lines are passed to the next node
+                            ending_lines += 1
+                            # new_node.ending_line_numbers.append(log_line_id)
+                            # For Evaluation, comment out if not needed
+                new_node.occurrence = occurrences
+                if ending_lines / float(self.occurrence) >= theta4:
+                    new_node.end = True
+                    new_node.ending_lines = ending_lines
+                if depth not in force_branch and len(new_dict) / float(self.occurrence) < theta5:
+                    # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e.,
+                    # no lines are passed to the next node
                     new_dict = {}
-                if newNode.occurrence != 0:
-                    newNode.theta1 = self.theta1 * (1 + (1 - newNode.occurrence / float(self.occurrence)) * damping)
-                newNode.buildTree(depth + 1, new_dict, delimiters, newNode.theta1, theta2, theta3, theta4, theta5, theta6, damping, forceBranch, forceVar)
-                
-                if sumFrequency2 / float(len(log_line_dict)) >= theta6 and listFailedElem[0] not in delimiters: # Adding a variable node at the end of the children
-                    newNode = Node(self.optionalNodePairs, self.mergeTupple)
-                    newNode.determine_datatype(listFailedElem)
-                    newNode.element = '§'
-                    newNode.isVariable = True
-                    newNode.parent = self
-                    self.children.append(newNode)
+                if new_node.occurrence != 0:
+                    new_node.theta1 = self.theta1 * (1 + (1 - new_node.occurrence / float(self.occurrence)) * damping)
+                new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
+                                    force_branch, force_var)
+
+                if sum_frequency2 / float(len(log_line_dict)) >= theta6 and list_failed_elem[0] not in delimiters:
+                    # Adding a variable node at the end of the children
+                    new_node = Node(self.optional_node_pairs, self.merge_tuple)
+                    new_node.determine_datatype(list_failed_elem)
+                    new_node.element = '§'
+                    new_node.is_variable = True
+                    new_node.parent = self
+                    self.children.append(new_node)
                     new_dict = {}
                     occurrences = 0
-                    endingLines = 0
+                    ending_lines = 0
                     for log_line_id in log_line_dict:
                         log_line = log_line_dict[log_line_id]
-                        if len(log_line.words) > depth and log_line.words[depth] in listFailedElem:
+                        if len(log_line.words) > depth and log_line.words[depth] in list_failed_elem:
                             occurrences += 1
                             if depth < len(log_line.words) - 1:
                                 new_dict[log_line_id] = log_line
                             elif depth == len(log_line.words) - 1:
-                                endingLines += 1
-                                #newNode.endingLineNumbers.append(log_line_id) # For Evaluation, comment out if not needed
-                    newNode.occurrence = sumFrequency2
-                    if endingLines / float(self.occurrence) >= theta4:
-                        newNode.end = True
-                        newNode.endingLines = endingLines
-                    if depth not in forceBranch and len(new_dict) / float(self.occurrence) < theta5:  # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e., no lines are passed to the next node
+                                ending_lines += 1
+                                # new_node.ending_line_numbers.append(log_line_id)
+                                # For Evaluation, comment out if not needed
+                    new_node.occurrence = sum_frequency2
+                    if ending_lines / float(self.occurrence) >= theta4:
+                        new_node.end = True
+                        new_node.ending_lines = ending_lines
+                    if depth not in force_branch and len(new_dict) / float(self.occurrence) < theta5:
+                        # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e.,
+                        # no lines are passed to the next node
                         new_dict = {}
-                    if newNode.occurrence != 0:
-                        newNode.theta1 = self.theta1 * (1 + (1 - newNode.occurrence / float(self.occurrence)) * damping)
-                    newNode.buildTree(depth + 1, new_dict, delimiters, newNode.theta1, theta2, theta3, theta4, theta5, theta6, damping, forceBranch, forceVar)
+                    if new_node.occurrence != 0:
+                        new_node.theta1 = self.theta1 * (1 + (1 - new_node.occurrence / float(self.occurrence)) * damping)
+                    new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
+                                        force_branch, force_var)
             else:
                 # Case 2 b)
-                newNode.element = '§'
-                newNode.isVariable = True
-                newNode.parent = self
-                self.children.append(newNode)
+                new_node.element = '§'
+                new_node.is_variable = True
+                new_node.parent = self
+                self.children.append(new_node)
                 new_dict = {}
-                endingLines = 0
+                ending_lines = 0
                 for log_line_id in log_line_dict:
                     log_line = log_line_dict[log_line_id]
                     if depth < len(log_line.words) - 1:
                         new_dict[log_line_id] = log_line
                     elif depth == len(log_line.words) - 1:
-                        endingLines += 1
-                        #newNode.endingLineNumbers.append(log_line_id) # For Evaluation, comment out if not needed
-                newNode.occurrence = len(log_line_dict)
-                if endingLines / float(self.occurrence) >= theta4:
-                    newNode.end = True
-                    newNode.endingLines = endingLines
-                if depth not in forceBranch and len(new_dict) / float(self.occurrence) < theta5:  # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e., no lines are passed to the next node
+                        ending_lines += 1  # new_node.ending_line_numbers.append(log_line_id) # For Evaluation, comment out if not needed
+                new_node.occurrence = len(log_line_dict)
+                if ending_lines / float(self.occurrence) >= theta4:
+                    new_node.end = True
+                    new_node.ending_lines = ending_lines
+                if depth not in force_branch and len(new_dict) / float(self.occurrence) < theta5:
+                    # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e.,
+                    # no lines are passed to the next node
                     new_dict = {}
-                if newNode.occurrence != 0:
-                    newNode.theta1 = self.theta1 * (1 + (1 - newNode.occurrence / float(self.occurrence)) * damping)
-                newNode.buildTree(depth + 1, new_dict, delimiters, newNode.theta1, theta2, theta3, theta4, theta5, theta6, damping, forceBranch, forceVar)
-        elif len(list) > 1:
+                if new_node.occurrence != 0:
+                    new_node.theta1 = self.theta1 * (1 + (1 - new_node.occurrence / float(self.occurrence)) * damping)
+                new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
+                                    force_branch, force_var)
+        elif len(list1) > 1:
             # Case 3
-            if sumFrequency / float(len(log_line_dict)) > theta3 or delimiterFlag == True:
+            if sum_frequency / float(len(log_line_dict)) > theta3 or delimiter_flag:
                 # Case 3 a)
-                for element in list:
-                    newNode = Node(self.optionalNodePairs, self.mergeTupple)
-                    newNode.datatype = ['string']
-                    newNode.element = element
-                    newNode.parent = self
+                for element in list1:
+                    new_node = Node(self.optional_node_pairs, self.merge_tuple)
+                    new_node.datatype = ['string']
+                    new_node.element = element
+                    new_node.parent = self
                     new_dict = {}
                     occurrences = 0
-                    endingLines = 0
+                    ending_lines = 0
                     for log_line_id in log_line_dict:
                         log_line = log_line_dict[log_line_id]
                         if len(log_line.words) > depth and log_line.words[depth] == element:
@@ -1772,320 +1851,338 @@ class Node:
                             if depth < len(log_line.words) - 1:
                                 new_dict[log_line_id] = log_line
                             elif depth == len(log_line.words) - 1:
-                                endingLines += 1
-                                #newNode.endingLineNumbers.append(log_line_id) # For Evaluation, comment out if not needed
-                    newNode.occurrence = occurrences
-                    #if newNode.occurrence == 1:
+                                ending_lines += 1
+                                # new_node.ending_line_numbers.append(log_line_id)
+                                # For Evaluation, comment out if not needed
+                    new_node.occurrence = occurrences
+                    # if new_node.occurrence == 1:
                     #    continue
-                    self.children.append(newNode)
-                    if endingLines / float(self.occurrence) >= theta4:
-                        newNode.end = True
-                        newNode.endingLines = endingLines
-                    if depth not in forceBranch and len(new_dict) / float(self.occurrence) < theta5:  # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e., no lines are passed to the next node
+                    self.children.append(new_node)
+                    if ending_lines / float(self.occurrence) >= theta4:
+                        new_node.end = True
+                        new_node.ending_lines = ending_lines
+                    if depth not in force_branch and len(new_dict) / float(self.occurrence) < theta5:
+                        # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e.,
+                        # no lines are passed to the next node
                         new_dict = {}
-                    if newNode.occurrence != 0:
-                        newNode.theta1 = self.theta1 * (1 + (1 - newNode.occurrence / float(self.occurrence)) * damping)
-                    newNode.buildTree(depth + 1, new_dict, delimiters, newNode.theta1, theta2, theta3, theta4, theta5, theta6, damping, forceBranch, forceVar)
+                    if new_node.occurrence != 0:
+                        new_node.theta1 = self.theta1 * (1 + (1 - new_node.occurrence / float(self.occurrence)) * damping)
+                    new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
+                                        force_branch, force_var)
 
-                if sumFrequency2 / float(len(log_line_dict)) >= theta6 and listFailedElem[0] not in delimiters: # Adding a variable node at the end of the children
-                    newNode = Node(self.optionalNodePairs, self.mergeTupple)
-                    newNode.determine_datatype(listFailedElem)
-                    newNode.element = '§'
-                    newNode.isVariable = True
-                    newNode.parent = self
-                    self.children.append(newNode)
+                if sum_frequency2 / float(len(log_line_dict)) >= theta6 and list_failed_elem[0] not in delimiters:
+                    # Adding a variable node at the end of the children
+                    new_node = Node(self.optional_node_pairs, self.merge_tuple)
+                    new_node.determine_datatype(list_failed_elem)
+                    new_node.element = '§'
+                    new_node.is_variable = True
+                    new_node.parent = self
+                    self.children.append(new_node)
                     new_dict = {}
                     occurrences = 0
-                    endingLines = 0
+                    ending_lines = 0
                     for log_line_id in log_line_dict:
                         log_line = log_line_dict[log_line_id]
-                        if len(log_line.words) > depth and log_line.words[depth] in listFailedElem:
+                        if len(log_line.words) > depth and log_line.words[depth] in list_failed_elem:
                             occurrences += 1
                             if depth < len(log_line.words) - 1:
                                 new_dict[log_line_id] = log_line
                             elif depth == len(log_line.words) - 1:
-                                endingLines += 1
-                                #newNode.endingLineNumbers.append(log_line_id) # For Evaluation, comment out if not needed
-                    newNode.occurrence = sumFrequency2
-                    if endingLines / float(self.occurrence) >= theta4:
-                        newNode.end = True
-                        newNode.endingLines = endingLines
-                    if depth not in forceBranch and len(new_dict) / float(self.occurrence) < theta5:  # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e., no lines are passed to the next node
+                                ending_lines += 1
+                                # new_node.ending_line_numbers.append(log_line_id)
+                                # For Evaluation, comment out if not needed
+                    new_node.occurrence = sum_frequency2
+                    if ending_lines / float(self.occurrence) >= theta4:
+                        new_node.end = True
+                        new_node.ending_lines = ending_lines
+                    if depth not in force_branch and len(new_dict) / float(self.occurrence) < theta5:
+                        # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e.,
+                        # no lines are passed to the next node
                         new_dict = {}
-                    if newNode.occurrence != 0:
-                        newNode.theta1 = self.theta1 * (1 + (1 - newNode.occurrence / float(self.occurrence)) * damping)
-                    newNode.buildTree(depth + 1, new_dict, delimiters, newNode.theta1, theta2, theta3, theta4, theta5, theta6, damping, forceBranch, forceVar)
+                    if new_node.occurrence != 0:
+                        new_node.theta1 = self.theta1 * (1 + (1 - new_node.occurrence / float(self.occurrence)) * damping)
+                    new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
+                                        force_branch, force_var)
             else:
                 # Case 3 b)
-                newNode.element = '§'
-                newNode.isVariable = True
-                newNode.parent = self
-                self.children.append(newNode)
+                new_node.element = '§'
+                new_node.is_variable = True
+                new_node.parent = self
+                self.children.append(new_node)
                 new_dict = {}
-                endingLines = 0
+                ending_lines = 0
                 for log_line_id in log_line_dict:
                     log_line = log_line_dict[log_line_id]
                     if depth < len(log_line.words) - 1:
                         new_dict[log_line_id] = log_line
                     elif depth == len(log_line.words) - 1:
-                        endingLines += 1
-                        #newNode.endingLineNumbers.append(log_line_id) # For Evaluation, comment out if not needed
-                newNode.occurrence = len(log_line_dict)
-                if endingLines / float(self.occurrence) >= theta4:
-                    newNode.end = True
-                    newNode.endingLines = endingLines
-                if depth not in forceBranch and len(new_dict) / float(self.occurrence) < theta5:  # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e., no lines are passed to the next node
+                        ending_lines += 1  # new_node.ending_line_numbers.append(log_line_id) # For Evaluation, comment out if not needed
+                new_node.occurrence = len(log_line_dict)
+                if ending_lines / float(self.occurrence) >= theta4:
+                    new_node.end = True
+                    new_node.ending_lines = ending_lines
+                if depth not in force_branch and len(new_dict) / float(self.occurrence) < theta5:
+                    # If almost all lines stop, do not make a subsequent node. This is accomplished by clearing the dict, i.e.,
+                    # no lines are passed to the next node
                     new_dict = {}
-                if newNode.occurrence != 0:
-                    newNode.theta1 = self.theta1 * (1 + (1 - newNode.occurrence / float(self.occurrence)) * damping)
-                newNode.buildTree(depth + 1, new_dict, delimiters, newNode.theta1, theta2, theta3, theta4, theta5, theta6, damping, forceBranch, forceVar)
+                if new_node.occurrence != 0:
+                    new_node.theta1 = self.theta1 * (1 + (1 - new_node.occurrence / float(self.occurrence)) * damping)
+                new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
+                                    force_branch, force_var)
 
     # This method returns the parser model for the AMiner
-    def writeConfig(self, depth, ID, subtreeList = [], ignoreFirstSubtree = False):
+    def write_config(self, depth, id1, subtree_list=None, ignore_first_subtree=False):
         # Insert a subtree if the node is root of any of the subtrees
-        returnString = ''
+        if subtree_list is None:
+            subtree_list = []
+        return_string = ''
 
-        if not ignoreFirstSubtree and (any(self in subtree for subtree in subtreeList) or any(self == pair[1] for pair in self.optionalNodePairs)):
-            subtreeNumber = next((i for i in range(len(subtreeList)) if self in subtreeList[i]), None)
-            returnString += '\t' * depth + 'subTree' + str(subtreeNumber) + ',\n'
-            return returnString
+        if not ignore_first_subtree and (
+                any(self in subtree for subtree in subtree_list) or any(self == pair[1] for pair in self.optional_node_pairs)):
+            subtree_number = next((i for i in range(len(subtree_list)) if self in subtree_list[i]), None)
+            return_string += '\t' * depth + 'subTree' + str(subtree_number) + ',\n'
+            return return_string
 
-        if any(self == pair[0] for pair in self.optionalNodePairs):
-            ID.value += 1
-            returnString += '\t' * depth + 'AnyMatchModelElement(\'anymatch' + str(ID.value) + '\', [\n'
+        if any(self == pair[0] for pair in self.optional_node_pairs):
+            id1.value += 1
+            return_string += '\t' * depth + 'AnyMatchModelElement(\'anymatch' + str(id1.value) + '\', [\n'
             depth += 1
-            usedNodes = []
-            for i in range(len(self.optionalNodePairs)):
-                if self == self.optionalNodePairs[i][0] and self.optionalNodePairs[i][1] not in usedNodes:
-                    returnString += self.optionalNodePairs[i][1].writeConfig(depth, ID, subtreeList)
-                    usedNodes.append(self.optionalNodePairs[i][1])
-            if self.element != None and len(self.children) == 1:
-                returnString += '\t' * depth + 'SequenceModelElement(\'sequence' + str(ID.value) + '\', [\n'
+            used_nodes = []
+            for i in range(len(self.optional_node_pairs)):
+                if self == self.optional_node_pairs[i][0] and self.optional_node_pairs[i][1] not in used_nodes:
+                    return_string += self.optional_node_pairs[i][1].write_config(depth, id1, subtree_list)
+                    used_nodes.append(self.optional_node_pairs[i][1])
+            if self.element is not None and len(self.children) == 1:
+                return_string += '\t' * depth + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n'
                 depth += 1
 
         # Escape the escape characters
         if self.element is not None:
-            if self.isList == True:
-                aggElements = '['
+            if self.is_list:
+                agg_elements = '['
                 for elem in self.element:
-                    aggElements += 'b\'' + elem.replace('\\', '\\\\').replace('\'', '\\\'') + '\', '
-                aggElements = aggElements[:-2]
-                aggElements += ']'
+                    agg_elements += 'b\'' + elem.replace('\\', '\\\\').replace('\'', '\\\'') + '\', '
+                agg_elements = agg_elements[:-2]
+                agg_elements += ']'
             else:
                 self.element = self.element.replace('\\', '\\\\').replace('\'', '\\\'')
+        return return_string
 
         # Delimited or VariableByte Datamodels should only be used when necessary, use more specific elements if possible
-        variableParserModel = 'var'
-        if self.isVariable == True:
-            ID.value += 1
-            self.ID = ID.value
+        variable_parser_model = 'var'
+        if self.is_variable:
+            id1.value += 1
+            self.ID = id1.value
             if 'ipaddress' in self.datatype:
-                variableParserModel = 'IpAddressDataModelElement(\'ipaddress' + str(ID.value) + '\'),\n'
+                variable_parser_model = 'IpAddressDataModelElement(\'ipaddress' + str(id1.value) + '\'),\n'
             elif 'integer' in self.datatype:
-                if self.parent is not None and type(self.parent) != list and self.parent.parent is not None and type(self.parent.parent) != list and \
-                        self.parent.element == ':' and 'ipaddress' in self.parent.parent.datatype:
-                    variableParserModel = 'DecimalIntegerValueModelElement(\'port' + str(ID.value) + '\'),\n'
+                if self.parent is not None and type(self.parent) != list and self.parent.parent is not None and type(
+                        self.parent.parent) != list and self.parent.element == ':' and 'ipaddress' in self.parent.parent.datatype:
+                    variable_parser_model = 'DecimalIntegerValueModelElement(\'port' + str(id1.value) + '\'),\n'
                 else:
-                    variableParserModel = 'DecimalIntegerValueModelElement(\'integer' + str(ID.value) + '\', valueSignType = DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),\n'
+                    variable_parser_model = 'DecimalIntegerValueModelElement(\'integer' + str(
+                        id1.value) + '\', valueSignType = DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),\n'
             elif 'base64' in self.datatype:
-                variableParserModel = 'Base64StringModelElement(\'base64encoded' + str(ID.value) + '\'),\n'
+                variable_parser_model = 'Base64StringModelElement(\'base64encoded' + str(id1.value) + '\'),\n'
             elif 'hex' in self.datatype:
-                variableParserModel = 'HexStringModelElement(\'hexstring' + str(ID.value) + '\'),\n'
+                variable_parser_model = 'HexStringModelElement(\'hexstring' + str(id1.value) + '\'),\n'
             elif 'datetime' in self.datatype:
-                variableParserModel = 'DateTimeModelElement(\'datetime' + str(ID.value) + '\'),\n'
+                variable_parser_model = 'DateTimeModelElement(\'datetime' + str(id1.value) + '\'),\n'
             elif 'float' in self.datatype:
-                variableParserModel = 'DecimalFloatValueModelElement(\'float' + str(ID.value) + '\'),\n'
+                variable_parser_model = 'DecimalFloatValueModelElement(\'float' + str(id1.value) + '\'),\n'
             else:
-                variableParserModel = 'VariableByteDataModelElement(\'string' + str(ID.value) + '\', dict),\n'
-
+                variable_parser_model = 'VariableByteDataModelElement(\'string' + str(id1.value) + '\', dict),\n'
 
         if len(self.children) == 0:
             # Node is a leaf node, return node info and do nothing else
             if self.element is None:
                 pass
-            elif self.isList == True:
-                ID.value += 1
-                self.ID = ID.value
-                returnString += '\t' * depth + 'FixedWordlistDataModelElement(\'fixed' + str(ID.value) + '\', ' + str(aggElements) + '),\n'
+            elif self.is_list:
+                id1.value += 1
+                self.ID = id1.value
+                return_string += '\t' * depth + 'FixedWordlistDataModelElement(\'fixed' + str(id1.value) + '\', ' + str(
+                    agg_elements) + '),\n'
 
-                if any(self == pair[0] for pair in self.optionalNodePairs):
-                    if self.element != None and len(self.children) == 1:
-                        returnString = returnString[:-2] + '])]),\n' # Closing FirstMatch and AnyMatch
+                if any(self == pair[0] for pair in self.optional_node_pairs):
+                    if self.element is not None and len(self.children) == 1:
+                        return_string = return_string[:-2] + '])]),\n'  # Closing FirstMatch and AnyMatch
                     else:
-                        returnString = returnString[:-2] + ']),\n' # Closing AnyMatch
-                return returnString
-            elif self.isVariable == True:
-                returnString += '\t' * depth + variableParserModel
+                        return_string = return_string[:-2] + ']),\n'  # Closing AnyMatch
+                return return_string
+            elif self.is_variable:
+                return_string += '\t' * depth + variable_parser_model
 
-                if any(self == pair[0] for pair in self.optionalNodePairs):
-                    if self.element != None and len(self.children) == 1:
-                        returnString = returnString[:-2] + '])]),\n' # Closing FirstMatch and AnyMatch
+                if any(self == pair[0] for pair in self.optional_node_pairs):
+                    if self.element is not None and len(self.children) == 1:
+                        return_string = return_string[:-2] + '])]),\n'  # Closing FirstMatch and AnyMatch
                     else:
-                        returnString = returnString[:-2] + ']),\n' # Closing AnyMatch
-                return returnString
+                        return_string = return_string[:-2] + ']),\n'  # Closing AnyMatch
+                return return_string
             else:
-                ID.value += 1
-                self.ID = ID.value
-                returnString += '\t' * depth + 'FixedDataModelElement(\'fixed' + str(ID.value) + '\', b\'' + self.element + '\'),\n'
+                id1.value += 1
+                self.ID = id1.value
+                return_string += '\t' * depth + 'FixedDataModelElement(\'fixed' + str(id1.value) + '\', b\'' + self.element + '\'),\n'
 
-                if any(self == pair[0] for pair in self.optionalNodePairs):
-                    if self.element != None and len(self.children) == 1:
-                        returnString = returnString[:-2] + '])]),\n' # Closing FirstMatch and AnyMatch
+                if any(self == pair[0] for pair in self.optional_node_pairs):
+                    if self.element is not None and len(self.children) == 1:
+                        return_string = return_string[:-2] + '])]),\n'  # Closing FirstMatch and AnyMatch
                     else:
-                        returnString = returnString[:-2] + ']),\n' # Closing AnyMatch
-                return returnString
+                        return_string = return_string[:-2] + ']),\n'  # Closing AnyMatch
+                return return_string
         elif len(self.children) == 1:
             # Node has exactly 1 child
 
             # Start a new sequence
             if self.element is None:
-                ID.value += 1
-                returnString += '\t' * depth + 'SequenceModelElement(\'sequence' + str(ID.value) + '\', [\n'
+                id1.value += 1
+                return_string += '\t' * depth + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n'
                 depth += 1
 
             if self.element is None:
                 pass
-            elif self.isList == True:
-                ID.value += 1
-                self.ID = ID.value
-                returnString += '\t' * depth + 'FixedWordlistDataModelElement(\'fixed' + str(ID.value) + 'b\', ' + str(aggElements) + '),\n'
-            elif self.isVariable == True:
-                returnString += '\t' * depth + variableParserModel
+            elif self.is_list:
+                id1.value += 1
+                self.ID = id1.value
+                return_string += '\t' * depth + 'FixedWordlistDataModelElement(\'fixed' + str(id1.value) + 'b\', ' + str(
+                    agg_elements) + '),\n'
+            elif self.is_variable:
+                return_string += '\t' * depth + variable_parser_model
             else:
-                ID.value += 1
-                self.ID = ID.value
-                returnString += '\t' * depth + 'FixedDataModelElement(\'fixed' + str(ID.value) + '\', b\'' + self.element + '\'),\n'
+                id1.value += 1
+                self.ID = id1.value
+                return_string += '\t' * depth + 'FixedDataModelElement(\'fixed' + str(id1.value) + '\', b\'' + self.element + '\'),\n'
 
             # If this is an end node, put everything that follows in an optional element
-            if self.end == True and self.element is not None:
-                ID.value += 1
-                returnString += '\t' * depth + 'OptionalMatchModelElement(\'optional' + str(ID.value) + '\', \n'
+            if self.end and self.element is not None:
+                id1.value += 1
+                return_string += '\t' * depth + 'OptionalMatchModelElement(\'optional' + str(id1.value) + '\', \n'
                 depth += 1
-                ID.value += 1
-                returnString += '\t' * depth + 'SequenceModelElement(\'sequence' + str(ID.value) + '\', [\n'
+                id1.value += 1
+                return_string += '\t' * depth + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n'
                 depth += 1
 
-            returnString += self.children[0].writeConfig(depth, ID, subtreeList)
+            return_string += self.children[0].write_config(depth, id1, subtree_list)
 
             # End Optional Element
-            if self.end == True and self.element is not None:
-                returnString = returnString[:-2] + '])),\n'
+            if self.end and self.element is not None:
+                return_string = return_string[:-2] + '])),\n'
 
             # End the sequence
             if self.element is None:
-                returnString = returnString[:-2] + ']),\n' # [:-2] removes newline and comma following last ModelElement
+                return_string = return_string[:-2] + ']),\n'  # [:-2] removes newline and comma following last ModelElement
 
-            if any(self == pair[0] for pair in self.optionalNodePairs):
-                if self.element != None and len(self.children) == 1:
-                    returnString = returnString[:-2] + '])]),\n' # Closing FirstMatch and AnyMatch
+            if any(self == pair[0] for pair in self.optional_node_pairs):
+                if self.element is not None and len(self.children) == 1:
+                    return_string = return_string[:-2] + '])]),\n'  # Closing FirstMatch and AnyMatch
                 else:
-                    returnString = returnString[:-2] + ']),\n' # Closing AnyMatch
+                    return_string = return_string[:-2] + ']),\n'  # Closing AnyMatch
 
-            return returnString
+            return return_string
         else:
             # Node has > 1 children
             # Note that its not possible that one of the children is a wildcard - there would be no branch then
 
             if self.element is None:
                 pass
-            elif self.isList == True:
-                ID.value += 1
-                self.ID = ID.value
-                returnString += '\t' * depth + 'FixedWordlistDataModelElement(\'fixed' + str(ID.value) + '\', ' + str(self.element) + '),\n'
-            elif self.isVariable == True:
-                returnString += '\t' * depth + variableParserModel
+            elif self.is_list:
+                id1.value += 1
+                self.ID = id1.value
+                return_string += '\t' * depth + 'FixedWordlistDataModelElement(\'fixed' + str(id1.value) + '\', ' + str(
+                    self.element) + '),\n'
+            elif self.is_variable:
+                return_string += '\t' * depth + variable_parser_model
             else:
-                ID.value += 1
-                self.ID = ID.value
-                returnString += '\t' * depth + 'FixedDataModelElement(\'fixed' + str(ID.value) + '\', b\'' + self.element + '\'),\n'
+                id1.value += 1
+                self.ID = id1.value
+                return_string += '\t' * depth + 'FixedDataModelElement(\'fixed' + str(id1.value) + '\', b\'' + self.element + '\'),\n'
             # If this is an end node, put everything that follows in an optional element
-            if self.end == True and self.element is not None:
-                ID.value += 1
-                returnString += '\t' * depth + 'OptionalMatchModelElement(\'optional' + str(ID.value) + '\', \n'
+            if self.end and self.element is not None:
+                id1.value += 1
+                return_string += '\t' * depth + 'OptionalMatchModelElement(\'optional' + str(id1.value) + '\', \n'
                 depth += 1
-                ID.value += 1
-                returnString += '\t' * depth + 'SequenceModelElement(\'sequence' + str(ID.value) + '\', [\n'
+                id1.value += 1
+                return_string += '\t' * depth + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n'
                 depth += 1
 
             # Get info about all children through recursion
-            ID.value += 1
-            returnString += '\t' * depth + 'FirstMatchModelElement(\'firstmatch' + str(ID.value) + '\', [\n'
+            id1.value += 1
+            return_string += '\t' * depth + 'FirstMatchModelElement(\'firstmatch' + str(id1.value) + '\', [\n'
             for child in self.children:
                 if self.element is None or len(child.children) > 0:
-                    ID.value += 1
+                    id1.value += 1
                     depth += 1
-                    returnString += '\t' * depth + 'SequenceModelElement(\'sequence' + str(ID.value) + '\', [\n'
+                    return_string += '\t' * depth + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n'
 
-                returnString += child.writeConfig(depth + 1, ID, subtreeList)
+                return_string += child.write_config(depth + 1, id1, subtree_list)
 
                 if self.element is None or len(child.children) > 0:
-                    returnString = returnString[:-2] + ']),\n'  # [:-2] removes newline and comma following last ModelElement
+                    return_string = return_string[:-2] + ']),\n'  # [:-2] removes newline and comma following last ModelElement
                     depth -= 1
 
-            returnString = returnString[:-2] + ']),\n' # [:-2] removes newline and comma following last ModelElement
+            return_string = return_string[:-2] + ']),\n'  # [:-2] removes newline and comma following last ModelElement
 
             # End Optional Element
-            if self.end == True and self.element is not None:
-                returnString = returnString[:-2] + '])),\n'
+            if self.end and self.element is not None:
+                return_string = return_string[:-2] + '])),\n'
 
-            if any(self == pair[0] for pair in self.optionalNodePairs):
-                if self.element != None and len(self.children) == 1:
-                    returnString = returnString[:-2] + '])]),\n' # Closing FirstMatch and AnyMatch
+            if any(self == pair[0] for pair in self.optional_node_pairs):
+                if self.element is not None and len(self.children) == 1:
+                    return_string = return_string[:-2] + '])]),\n'  # Closing FirstMatch and AnyMatch
                 else:
-                    returnString = returnString[:-2] + ']),\n' # Closing AnyMatch
+                    return_string = return_string[:-2] + ']),\n'  # Closing AnyMatch
 
-            return returnString
+            return return_string
 
     # this method returns the assigning of the subtrees for the AMiner
-    def writeConfigSubtrees(self, ID, subtreeList):
+    def write_config_subtrees(self, id1, subtree_list):
 
-        self.sortSubtrees(subtreeList)
+        self.sort_subtrees(subtree_list)
 
-        returnString = ''
-        if subtreeList != []:
-            for i in range(len(subtreeList)):
-                returnString += '\tsubTree' + str(i) + ' = ' + 'SequenceModelElement(\'sequence' + str(ID.value) + '\', [\n' \
-                        + subtreeList[i][0].writeConfig(2, ID, subtreeList, ignoreFirstSubtree = True)[:-2] + '])\n\n' # [:-2] removes comma following last ModelElement and tabulator preceding first ModelElement
+        return_string = ''
+        if subtree_list:
+            for i in range(len(subtree_list)):
+                return_string += '\tsubTree' + str(i) + ' = ' + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n' + \
+                                 subtree_list[i][0].write_config(2, id1, subtree_list, ignore_first_subtree=True)[:-2] + '])\n\n'
+                # [:-2] removes comma following last ModelElement and tabulator preceding first ModelElement
 
-        return returnString + '\n'
+        return return_string + '\n'
 
-    # Sorts the subtreeList in ascending order
-    def sortSubtrees(self, subtreeList):
-        subtreeList.sort(key=lambda x: x[0].subtreeHeight())
-        return
+    # Sorts the subtree_list in ascending order
+    def sort_subtrees(self, subtree_list):
+        subtree_list.sort(key=lambda x: x[0].subtree_height())
 
     # This method checks whether the words occurring at a node have a specific data type
     def determine_datatype(self, words):
         for elem in words:
-            if 'float' in self.datatype and Node.is_float(self, elem) == False:
+            if 'float' in self.datatype and not Node.is_float(self, elem):
                 self.datatype.remove('float')
 
-            if 'integer' in self.datatype and Node.is_integer(self, elem) == False:
+            if 'integer' in self.datatype and not Node.is_integer(self, elem):
                 self.datatype.remove('integer')
 
-            if 'hex' in self.datatype and Node.is_hex(self, elem) == False:
+            if 'hex' in self.datatype and not Node.is_hex(self, elem):
                 self.datatype.remove('hex')
 
-            if 'datetime' in self.datatype and Node.is_datetime(self, elem) == False:
+            if 'datetime' in self.datatype and not Node.is_datetime(self, elem):
                 self.datatype.remove('datetime')
 
-            if 'base64' in self.datatype and Node.is_base64(self, elem) == False:
+            if 'base64' in self.datatype and not Node.is_base64(self, elem):
                 self.datatype.remove('base64')
 
-            if 'ipaddress' in self.datatype and Node.is_ipaddress(self, elem) == False:
+            if 'ipaddress' in self.datatype and not Node.is_ipaddress(self, elem):
                 self.datatype.remove('ipaddress')
 
-    def checkConsistency(self):
+    def check_consistency(self):
         for child in self.children:
-            if child.parent != self or not child.checkConsistency():
+            if child.parent != self or not child.check_consistency():
                 if False and child.parent != self:
                     print(self)
                 return False
         return True
 
-    def updateParents(self):
+    def update_parents(self):
         for child in self.children:
-            child.updateParents()
+            child.update_parents()
             if child.parent != self:
                 child.parent = self
 
@@ -2146,5 +2243,4 @@ class Node:
     def __str__(self):
         """Get a string representation of this match element excluding
         the children"""
-        return self.toString(0)[1:]
-        
+        return self.to_string(0)[1:]
