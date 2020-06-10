@@ -1,4 +1,4 @@
-from source import LogLine, Node, GlobalID, PGConfig
+import LogLine, Node, GlobalID, PGConfig
 from collections import Counter
 
 
