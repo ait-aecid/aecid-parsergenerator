@@ -1,7 +1,7 @@
-input_file = 'data/in/audit.log'
-tree_file = 'data/out/tree.txt'
-parser_file = 'data/out/GeneratedParserModel.py'
-templates_file = 'data/out/logTemplates.txt'
+input_file = 'unit/in/test1.log'
+tree_file = 'unit/out/tree.txt'
+parser_file = 'unit/out/GeneratedParserModel.py'
+templates_file = 'unit/out/logTemplates.txt'
 time_stamp_length = -1
 theta1 = 0.1
 theta2 = 0.9
@@ -20,4 +20,4 @@ subtree_min_height = 1  # Number of the minimal height of the found subtrees. Mi
 element_list_similarity = 0.66  # Minimal similarity for two lists to be considered of the same origin
 # Optional:
 visualize = False
-visualization_file = 'data/out/visualization.png'
+visualization_file = 'unit/out/visualization.png'

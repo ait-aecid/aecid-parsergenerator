@@ -1,4 +1,4 @@
-import LogLine, Node, GlobalID, PGConfig
+from source import LogLine, Node, GlobalID, PGConfig
 from collections import Counter
 
 
@@ -223,7 +223,6 @@ config += 'from aminer.parsing import Base64StringModelElement\n'
 config += 'from aminer.parsing import DateTimeModelElement\n'
 config += 'from aminer.parsing import DecimalFloatValueModelElement\n'
 config += 'from aminer.parsing import DecimalIntegerValueModelElement\n'
-config += 'from aminer.parsing import DelimitedDataModelElement\n'
 config += 'from aminer.parsing import FirstMatchModelElement\n'
 config += 'from aminer.parsing import FixedDataModelElement\n'
 config += 'from aminer.parsing import FixedWordlistDataModelElement\n'
