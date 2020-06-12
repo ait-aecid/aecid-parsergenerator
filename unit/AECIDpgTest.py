@@ -2,7 +2,6 @@ import unittest
 import shutil
 import os
 import importlib
-import random
 import string
 from _datetime import datetime
 from time import time
