@@ -186,6 +186,7 @@ class AECIDpgTest(unittest.TestCase):
             "FixedDataModelElement('fixed18',b'This is an optional part of the log line.'])]", generated_model)
 
     def test3sub_trees(self):
+        """This unittest checks the functionality of the sub_tree generation."""
         log_lines = []
         i_str = b'0'
         log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' started.')
