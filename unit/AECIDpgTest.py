@@ -20,6 +20,7 @@ class AECIDpgTest(unittest.TestCase):
 
     log_file_name = 'unit/in/test1.log'
     generated_model_file_name = 'unit/out/GeneratedParserModel.py'
+    maxDiff = None
 
     def setUp(self):
         shutil.move('source/PGConfig.py', 'source/PGConfig_old.py')
@@ -34,6 +35,7 @@ class AECIDpgTest(unittest.TestCase):
         os.remove('unit/in/test1.log')
 
     def test1basic_parsing_models(self):
+        """This unittest checks if basic parsing ModelElements are discovered properly"""
         log_lines = [b'word'] * 100
         with open(self.log_file_name, 'wb') as f:
             for log in log_lines:
@@ -88,7 +90,7 @@ class AECIDpgTest(unittest.TestCase):
                 f.write(b'\n')
         importlib.reload(source.AECIDpg)
         generated_model = self.read_generated_parser_model()
-        self.assertEqual("model = VariableByteDataModelElement('string0')", generated_model)
+        self.assertEqual("model = VariableByteDataModelElement('string0', alphabet)", generated_model)
 
         log_lines = [bytes(datetime.fromtimestamp(time() + i * 90000).strftime('%m/%d/%Y %H:%M:%S'), 'utf-8') for i in range(100)]
         with open(self.log_file_name, 'wb') as f:
@@ -116,6 +118,76 @@ class AECIDpgTest(unittest.TestCase):
         importlib.reload(source.AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = IpAddressDataModelElement('ipaddress0')", generated_model)
+
+    def test2combined_parsing_models(self):
+        """This unittest checks if advanced ModelElements like FirstMatchModelElement, SequenceModelElement and OptionalMatchModelElement
+        are discovered properly."""
+        wordlist = [b'this', b'that', b'those']
+        wordlist.sort()
+        log_lines = []
+        i = 0
+        log_lines.append(b'word ' + wordlist[random.randint(0, len(wordlist) - 1)] + b' ' + bytes(str(i), 'utf-8') + b' ' +
+                         bytes(str(i / 10.0), 'utf-8') + b' ' + b64encode(bytes(self.random_string(), 'utf-8')) + b' '+
+                         bytes(self.random_string(), 'utf-8') + b' ' +
+                         socket.inet_ntoa(struct.pack('>I', random.randint(1, 0xffffffff))).encode())
+        for i in range(1000):
+            log_lines.append(b'word ' + wordlist[random.randint(0, len(wordlist) - 1)] + b' ' + bytes(str(i), 'utf-8') + b' ' +
+                             bytes(str(i / 10.0), 'utf-8') + b' ' + b64encode(bytes(self.random_string(), 'utf-8')) + b' ' +
+                             bytes(self.random_string(), 'utf-8') + b' ' +
+                             socket.inet_ntoa(struct.pack('>I', random.randint(1, 0xffffffff))).encode())
+        with open(self.log_file_name, 'wb') as f:
+            for log in log_lines:
+                f.write(log)
+                f.write(b'\n')
+        import source.AECIDpg
+        importlib.reload(source.AECIDpg)
+        generated_model = self.read_generated_parser_model()
+        generated_model = generated_model.replace(',', ', ')
+        self.assertEqual(
+            "model = SequenceModelElement('sequence0', [FixedDataModelElement('fixed1', b'word '), FixedWordlistDataModelElement('fixed2', "
+            "[b'this', b'that', b'those']), FixedDataModelElement('fixed3', b' '), DecimalIntegerValueModelElement(integer4, "
+            "value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL), FixedDataModelElement('fixed5', b' '), "
+            "DecimalFloatValueModelElement('float6', value_sign_type=DecimalFloatValueModelElement.SIGN_TYPE_OPTIONAL), "
+            "FixedDataModelElement('fixed7', b' '), Base64StringModelElement('base64encoded8'), FixedDataModelElement('fixed9', b' '), "
+            "VariableByteDataModelElement('string10', alphabet), FixedDataModelElement('fixed11', b' '), "
+            "IpAddressDataModelElement('ipaddress12')]", generated_model)
+
+        log_lines = []
+        for i in range(10000):
+            r = random.randint(0, 1)
+            if r == 0:
+                log_lines.append(b'word ' + wordlist[random.randint(0, len(wordlist) - 1)] + b' ' + bytes(str(i), 'utf-8') + b' ' +
+                                 bytes(str(i / 10.0), 'utf-8') + b' ' + b64encode(bytes(self.random_string(), 'utf-8')) + b' ' +
+                                 bytes(self.random_string(), 'utf-8') + b' ' +
+                                 socket.inet_ntoa(struct.pack('>I', random.randint(1, 0xffffffff))).encode())
+            else:
+                r = random.randint(0, 1)
+                log_line = 'System started at %s.' % datetime.fromtimestamp(time() + i * 90000).strftime('%m/%d/%Y %H:%M:%S')
+                if r == 1:
+                    log_line += ' This is an optional part of the log line.'
+                log_lines.append(log_line.encode())
+        with open(self.log_file_name, 'wb') as f:
+            for log in log_lines:
+                f.write(log)
+                f.write(b'\n')
+        import source.AECIDpg
+        importlib.reload(source.AECIDpg)
+        generated_model = self.read_generated_parser_model()
+        generated_model = generated_model.replace(',', ', ')
+        self.assertEqual(
+            "model = FirstMatchModelElement('firstmatch0', [SequenceModelElement('sequence1', [FixedDataModelElement('fixed2', b'word '), "
+            "FixedWordlistDataModelElement('fixed3', [b'this', b'that', b'those']), FixedDataModelElement('fixed4', b' '), "
+            "DecimalIntegerValueModelElement(integer5, value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL), "
+            "FixedDataModelElement('fixed6', b' '), DecimalFloatValueModelElement('float7', "
+            "value_sign_type=DecimalFloatValueModelElement.SIGN_TYPE_OPTIONAL), FixedDataModelElement('fixed8', b' '), "
+            "Base64StringModelElement('base64encoded9'), FixedDataModelElement('fixed10', b' '), "
+            "VariableByteDataModelElement('string11', alphabet), FixedDataModelElement('fixed12', b' '), "
+            "IpAddressDataModelElement('ipaddress13')], SequenceModelElement('sequence14', [FixedDataModelElement('fixed15', "
+            "b'System started at ', DateTimeModelElement('datetime16'), OptionalMatchModelElement('optional17', "
+            "FixedDataModelElement('fixed18', b'This is an optional part of the log line.'])]", generated_model)
+
+    def test3sub_trees(self):
+        pass
 
     def read_generated_parser_model(self):
         generated_model = ''
