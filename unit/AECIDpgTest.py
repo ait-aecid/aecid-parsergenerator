@@ -142,14 +142,14 @@ class AECIDpgTest(unittest.TestCase):
         import source.AECIDpg
         importlib.reload(source.AECIDpg)
         generated_model = self.read_generated_parser_model()
-        generated_model = generated_model.replace(',', ', ')
+        generated_model = generated_model.replace(', ', ',')
         self.assertEqual(
-            "model = SequenceModelElement('sequence0', [FixedDataModelElement('fixed1', b'word '), FixedWordlistDataModelElement('fixed2', "
-            "[b'this', b'that', b'those']), FixedDataModelElement('fixed3', b' '), DecimalIntegerValueModelElement(integer4, "
-            "value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL), FixedDataModelElement('fixed5', b' '), "
-            "DecimalFloatValueModelElement('float6', value_sign_type=DecimalFloatValueModelElement.SIGN_TYPE_OPTIONAL), "
-            "FixedDataModelElement('fixed7', b' '), Base64StringModelElement('base64encoded8'), FixedDataModelElement('fixed9', b' '), "
-            "VariableByteDataModelElement('string10', alphabet), FixedDataModelElement('fixed11', b' '), "
+            "model = SequenceModelElement('sequence0',[FixedDataModelElement('fixed1',b'word '),FixedWordlistDataModelElement('fixed2',"
+            "[b'this',b'that',b'those']),FixedDataModelElement('fixed3',b' '),DecimalIntegerValueModelElement(integer4,"
+            "value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),FixedDataModelElement('fixed5',b' '),"
+            "DecimalFloatValueModelElement('float6',value_sign_type=DecimalFloatValueModelElement.SIGN_TYPE_OPTIONAL),"
+            "FixedDataModelElement('fixed7',b' '),Base64StringModelElement('base64encoded8'),FixedDataModelElement('fixed9',b' '),"
+            "VariableByteDataModelElement('string10', alphabet), FixedDataModelElement('fixed11', b' '),"
             "IpAddressDataModelElement('ipaddress12')]", generated_model)
 
         log_lines = []
@@ -170,24 +170,70 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        import source.AECIDpg
         importlib.reload(source.AECIDpg)
         generated_model = self.read_generated_parser_model()
-        generated_model = generated_model.replace(',', ', ')
+        generated_model = generated_model.replace(', ', ',')
         self.assertEqual(
-            "model = FirstMatchModelElement('firstmatch0', [SequenceModelElement('sequence1', [FixedDataModelElement('fixed2', b'word '), "
-            "FixedWordlistDataModelElement('fixed3', [b'this', b'that', b'those']), FixedDataModelElement('fixed4', b' '), "
-            "DecimalIntegerValueModelElement(integer5, value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL), "
-            "FixedDataModelElement('fixed6', b' '), DecimalFloatValueModelElement('float7', "
-            "value_sign_type=DecimalFloatValueModelElement.SIGN_TYPE_OPTIONAL), FixedDataModelElement('fixed8', b' '), "
-            "Base64StringModelElement('base64encoded9'), FixedDataModelElement('fixed10', b' '), "
-            "VariableByteDataModelElement('string11', alphabet), FixedDataModelElement('fixed12', b' '), "
-            "IpAddressDataModelElement('ipaddress13')], SequenceModelElement('sequence14', [FixedDataModelElement('fixed15', "
-            "b'System started at ', DateTimeModelElement('datetime16'), OptionalMatchModelElement('optional17', "
-            "FixedDataModelElement('fixed18', b'This is an optional part of the log line.'])]", generated_model)
+            "model = FirstMatchModelElement('firstmatch0',[SequenceModelElement('sequence1',[FixedDataModelElement('fixed2',b'word '),"
+            "FixedWordlistDataModelElement('fixed3',[b'this',b'that',b'those']),FixedDataModelElement('fixed4',b' '),"
+            "DecimalIntegerValueModelElement(integer5,value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),"
+            "FixedDataModelElement('fixed6',b' '),DecimalFloatValueModelElement('float7',"
+            "value_sign_type=DecimalFloatValueModelElement.SIGN_TYPE_OPTIONAL),FixedDataModelElement('fixed8',b' '),"
+            "Base64StringModelElement('base64encoded9'),FixedDataModelElement('fixed10',b' '),"
+            "VariableByteDataModelElement('string11',alphabet),FixedDataModelElement('fixed12',b' '),"
+            "IpAddressDataModelElement('ipaddress13')],SequenceModelElement('sequence14',[FixedDataModelElement('fixed15',"
+            "b'System started at ',DateTimeModelElement('datetime16'),OptionalMatchModelElement('optional17',"
+            "FixedDataModelElement('fixed18',b'This is an optional part of the log line.'])]", generated_model)
 
     def test3sub_trees(self):
-        pass
+        log_lines = []
+        i_str = b'0'
+        log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' started.')
+        log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' stopped.')
+        log_lines.append(b'Log line for cron[' + i_str + b'].')
+        log_lines.append(b'Another ' + b'cron[' + i_str + b'] log.')
+        for i in range(1000):
+            i_str = str(i).encode()
+            r = random.randint(0, 3)
+            if r == 0:
+                log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' started.')
+            elif r == 1:
+                log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' stopped.')
+            elif r == 2:
+                log_lines.append(b'Log line for cron[' + i_str + b'].')
+            else:
+                log_lines.append(b'Another ' + b'cron[' + i_str + b'] log.')
+        with open(self.log_file_name, 'wb') as f:
+            for log in log_lines:
+                f.write(log)
+                f.write(b'\n')
+        import source.AECIDpg
+        importlib.reload(source.AECIDpg)
+        generated_model = self.read_sub_trees_and_model()
+        generated_model = generated_model.replace(', ', ',')
+        self.assertEqual(
+            "sub_tree0 = SequenceModelElement('sequence0',[FixedDataModelElement('fixed1',b'cron['),"
+            "DecimalIntegerValueModelElement(integer2,value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),"
+            "FixedDataModelElement('fixed3',b']')]"
+            "model = FirstMatchModelElement('firstmatch4',[SequenceModelElement('sequence5',[sub_tree0,"
+            "FixedDataModelElement('fixed6',b': Cron job '),DecimalIntegerValueModelElement(integer7,"
+            "value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL), FixedWordlistDataModelElement('fixed8',"
+            "[b' started',b'stopped'])], SequenceModelElement('sequence9',[FixedDataModelElement('fixed10',b'Log line for '),"
+            "sub_tree0,FixedDataModelElement('fixed11',b'.')],SequenceModelElement('sequence12',["
+            "FixedDataModelElement('fixed12',b'Another '),sub_tree0,FixedDataModelElement('fixed13',b' log.')])]", generated_model)
+
+    def read_sub_trees_and_model(self):
+        generated_model = ''
+        with open(self.generated_model_file_name) as f:
+            found = False
+            for line in f.readlines():
+                if 'sub_tree' in line:
+                    found = True
+                elif 'return model' in line:
+                    found = False
+                if found:
+                    generated_model += line.strip()
+        return generated_model
 
     def read_generated_parser_model(self):
         generated_model = ''
