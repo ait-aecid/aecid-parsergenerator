@@ -50,8 +50,7 @@ root (2998)
                                             - "apache2" exe="/usr/sbin/apache2" key=(null) (1213) - Theta=0.1
                                             - § (36) - Theta=0.1
                                              -  exe= (36) - Theta=0.1
-                                              - "/usr/bin/suricata" (35) - Theta=0.1
-                                               -  key=(null) (35) - Theta=0.1
+                                              - "/usr/bin/suricata" key=(null) (35) - Theta=0.1
                                               - § (1) - Theta=0.1
                                                -  key=(null) (1) - Theta=0.1
        - § (53) - Theta=0.1
@@ -91,8 +90,7 @@ root (2998)
                                          - § (53) - Theta=0.1
                                           -  tty=(none) ses= (53) - Theta=0.1
                                            - § (53) - Theta=0.1
-                                            -  comm= (53) - Theta=0.1
-                                             - "apache2" exe="/usr/sbin/apache2" key=(null) (53) - Theta=0.1
+                                            -  comm="apache2" exe="/usr/sbin/apache2" key=(null) (53) - Theta=0.1
   - PATH msg= (384) - Theta=0.1
    - § (384) - Theta=0.1
     -  item= (384) - Theta=0.1
