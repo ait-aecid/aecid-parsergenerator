@@ -913,7 +913,7 @@ class Node:
         return elementList
 
     # This function gets a consistent set of matches of two trees and a set of possible matches. The function returns a consistent set of
-    # matches which includes the previous  matches and the highest number of possible matches, such that the set stays consistent
+    # matches which includes the previous matches and the highest number of possible matches, such that the set stays consistent
     def match_parser_nodes(self, previous_matches, new_matches):
         debug_mode = False
         if debug_mode:
@@ -1980,7 +1980,7 @@ class Node:
                     variable_parser_model = 'DecimalIntegerValueModelElement(\'port' + str(id1.value) + '\'),\n'
                 else:
                     variable_parser_model = 'DecimalIntegerValueModelElement(\'integer' + str(
-                        id1.value) + '\', value_sign_type = DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),\n'
+                        id1.value) + '\', value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),\n'
             elif 'base64' in self.datatype:
                 variable_parser_model = 'Base64StringModelElement(\'base64encoded' + str(id1.value) + '\'),\n'
             elif 'hex' in self.datatype:

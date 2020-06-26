@@ -51,7 +51,7 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
 # import log data and preprocess
 input_file = PGConfig.input_file
 delimiters = PGConfig.delimiters
-time_stamp_length = PGConfig.time_stamp_length  # 15
+time_stamp_length = PGConfig.time_stamp_length
 line_id = 0
 log_line_list = []
 log_line_unedited_list = []
@@ -102,14 +102,6 @@ with open(input_file) as f:
 f.close()
 
 print('Total amount of log lines read: ' + str(counter))
-
-# Print Log File without special characters and annoying line feeds
-# print 'Print log file'
-# with open('data/out/logfile_clean.txt', 'wb') as file:
-#    for line in log_line_unedited_list:
-#        text = line + '\n'
-#        file.write(text)
-# f.close()
 
 print('Build tree')
 # Create root node for the tree
