@@ -31,7 +31,7 @@ class AECIDpgTest(unittest.TestCase):
         os.remove(self.generated_model_file_name)
         os.remove('unit/out/logTemplates.txt')
         os.remove('unit/out/tree.txt')
-        os.remove('unit/in/test1.log')
+        os.remove(self.log_file_name)
 
     def test1basic_parsing_models(self):
         """This unittest checks if basic parsing ModelElements are discovered properly"""
