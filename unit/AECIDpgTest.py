@@ -22,16 +22,16 @@ class AECIDpgTest(unittest.TestCase):
     maxDiff = None
 
     def setUp(self):
-        shutil.move('source/PGConfig.py', 'source/PGConfig_old.py')
-        shutil.copyfile('unit/PGTestConfig.py', 'source/PGConfig.py')
+        shutil.move('PGConfig.py', 'PGConfig_old.py')
+        shutil.copyfile('unit/PGTestConfig.py', 'PGConfig.py')
 
     def tearDown(self):
-        os.remove('source/PGConfig.py')
-        shutil.move('source/PGConfig_old.py', 'source/PGConfig.py')
+        os.remove('PGConfig.py')
+        shutil.move('PGConfig_old.py', 'PGConfig.py')
         os.remove(self.generated_model_file_name)
         os.remove('unit/out/logTemplates.txt')
         os.remove('unit/out/tree.txt')
-        os.remove(self.log_file_name)
+        #os.remove(self.log_file_name)
 
     def test1basic_parsing_models(self):
         """This unittest checks if basic parsing ModelElements are discovered properly"""
@@ -40,7 +40,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        import source.AECIDpg
+        import AECIDpg
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = FixedDataModelElement('fixed0', b'word')", generated_model)
 
@@ -49,7 +49,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = FixedWordlistDataModelElement('fixed0', [b'this', b'that', b'those'])", generated_model)
 
@@ -58,7 +58,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = DecimalIntegerValueModelElement('integer0', value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_"
                          "OPTIONAL))", generated_model)
@@ -68,7 +68,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = DecimalFloatValueModelElement('float0', value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_"
                          "OPTIONAL))", generated_model)
@@ -78,7 +78,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = Base64StringModelElement('base64encoded0')", generated_model)
 
@@ -87,7 +87,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = VariableByteDataModelElement('string0', alphabet)", generated_model)
 
@@ -96,7 +96,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = DateTimeModelElement('datetime0')", generated_model)
 
@@ -105,7 +105,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = HexStringModelElement('hexstring0')", generated_model)
 
@@ -114,7 +114,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         self.assertEqual("model = IpAddressDataModelElement('ipaddress0')", generated_model)
 
@@ -138,8 +138,8 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        import source.AECIDpg
-        importlib.reload(source.AECIDpg)
+        import AECIDpg
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         generated_model = generated_model.replace(', ', ',')
         self.assertEqual(
@@ -169,7 +169,7 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        importlib.reload(source.AECIDpg)
+        importlib.reload(AECIDpg)
         generated_model = self.read_generated_parser_model()
         generated_model = generated_model.replace(', ', ',')
         self.assertEqual(
@@ -207,8 +207,8 @@ class AECIDpgTest(unittest.TestCase):
             for log in log_lines:
                 f.write(log)
                 f.write(b'\n')
-        import source.AECIDpg
-        importlib.reload(source.AECIDpg)
+        import AECIDpg
+        importlib.reload(AECIDpg)
         generated_model = self.read_sub_trees_and_model()
         generated_model = generated_model.replace(', ', ',')
         self.assertEqual(
