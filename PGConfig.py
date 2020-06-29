@@ -11,7 +11,7 @@ You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
-input_file = 'data/in/audit.log'
+input_file = 'data/in/test.log'
 tree_file = 'data/out/tree.txt'
 parser_file = 'data/out/GeneratedParserModel.py'
 templates_file = 'data/out/logTemplates.txt'
@@ -25,7 +25,7 @@ theta6 = 0.001  # Threshold for optional nodes in branches.
 damping = 0.0
 merge_similarity = 0.7
 delimiters = [' ', '=']
-force_branch = []
+force_branch = [0]
 force_var = []
 # Threshold for the similarity of the subtrees. If the calculated similarity exceeds the threshold, the subtrees are merged
 merge_subtrees_min_similarity = 0.45

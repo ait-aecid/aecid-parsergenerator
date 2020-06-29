@@ -147,37 +147,16 @@ root.sort_children()
 subtree_list = []
 
 # Insert variables when branches are followed by similar paths
-if False:  # Works, but not with other refine tree method
-    print('Refine tree by aggregating similar paths')
-    root.insert_variables_and_lists(PGConfig.merge_similarity, delimiters, 0, PGConfig.force_branch)
-    # root.insert_variables(PGConfig.merge_similarity, delimiters, 0, PGConfig.force_branch)
-
-if True:  # Works
-    print('Refine tree by aggregating similar paths')
-    for j in range(len(root.children) - 1, -1, -1):
-        for i in range(j + 1, len(root.children)):
-            # print(i,j)
-            # print('Match: %s'%root.children[i].get_subtree_match(root.children[j], delimiters))
-            [previous_matches, similarity] = root.children[i].get_subtree_match(root.children[j], delimiters)
-            # print('Result get_subtree_match: %s, %s'%(previous_matches, similarity))
-            if similarity >= PGConfig.merge_subtrees_min_similarity:
-                print('Merge subtrees: %s - %s' % (root.children[i].element, root.children[j].element))
-                root.children[i].merge_subtree_matches(root.children[j], previous_matches, [0], [1])
-                del root.children[j]
+print('Refine tree by aggregating similar paths')
+root.insert_variables(PGConfig.merge_similarity, delimiters, 0, PGConfig.force_branch)
 
 # Create lists instead of branches if following paths are equal
 print('Replace equal branches with lists')
 root.insert_lists()
 
 # Compares the element lists and expands them to enable a bigger coverage of values
-if True:  # Works
-    print('Match list elements')
-    root.match_lists(PGConfig.element_list_similarity)
-
-# Get a list which includes the nodes of common subtrees
-if True:  # Works
-    print('Getting the list of subtrees')
-    subtree_list = root.get_subtrees(PGConfig.subtree_min_height)
+print('Match list elements')
+root.match_lists(PGConfig.element_list_similarity)
 
 # Sort fixed elements after branches because the AMiner takes the wrong path if elements are subsets of each other
 print('Sort branches')

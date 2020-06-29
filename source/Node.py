@@ -40,42 +40,6 @@ class Node:
         self.optional_node_pairs = optional_node_pairs  # List of the First and the last
         self.merge_tuple = merge_tuple  # List of nodes, which are inserted into the branch after the matching has happened
 
-    # This method makes a deep copy of
-    def deepcopy(self, end_node):
-        new_end_node = None
-        new_node = Node(self.optional_node_pairs, self.merge_tuple)
-
-        if self.is_list:
-            new_node.element = []
-            new_node.element.extend(self.element)
-        else:
-            new_node.element = self.element
-
-        new_node.is_list = self.is_list
-        new_node.is_variable = self.is_variable
-        new_node.occurrence = self.occurrence
-        new_node.end = self.end
-        new_node.theta1 = self.theta1
-        new_node.ending_lines = self.ending_lines
-        new_node.datatype = []
-        new_node.datatype.extend(self.datatype)
-
-        if self != end_node:
-            for child in self.children:
-                if new_end_node is None:
-                    [new_child, new_end_node] = child.deepcopy(end_node)
-                    new_node.children.append(new_child)
-                else:
-                    new_node.children.append(child.deepcopy(end_node)[0])
-
-            for child in new_node.children:
-                child.parent = new_node
-
-        else:
-            new_end_node = new_node
-
-        return [new_node, new_end_node]
-
     # This method returns a textual representation of the parser tree, with additional node information (line occurrences, end node, theta)
     def to_string(self, depth):
         return_string = ''
@@ -234,13 +198,6 @@ class Node:
             child_datatypes.append(this_datatype)
             return child_datatypes
 
-    # Sorts the subtree_list in ascending order
-    def subtree_height(self):
-        if len(self.children) == 0:
-            return 0
-        else:
-            return max(child.subtree_height() for child in self.children) + 1
-
     # This method aggregates two subsequent fixed nodes in order to reduce the overall amount of nodes and tree complexity
     def aggregate_sequences(self, subtree_list=None):
         if subtree_list is None:
@@ -267,22 +224,6 @@ class Node:
         else:
             for child in self.children:
                 child.aggregate_sequences(subtree_list)
-
-    # This method returns a alphabet of all nodes, referenced by their IDs
-    def get_node_mappings(self):
-        if len(self.children) == 0:
-            dictionary = {self.ID: self}
-            return dictionary
-        elif len(self.children) == 1:
-            child = self.children[0]
-            dictionary = child.get_node_mappings()
-            dictionary.update({self.ID: self})
-            return dictionary
-        else:
-            dictionary = {self.ID: self}
-            for child in self.children:
-                dictionary.update(child.get_node_mappings())
-            return dictionary
 
     # This method returns all edges of the parser tree
     def get_node_connections(self):
@@ -389,6 +330,22 @@ class Node:
                 child.insert_lists()
             return
 
+    # This method returns a alphabet of all nodes, referenced by their IDs
+    def get_node_mappings(self):
+        if len(self.children) == 0:
+            dictionary = {self.ID: self}
+            return dictionary
+        elif len(self.children) == 1:
+            child = self.children[0]
+            dictionary = child.get_node_mappings()
+            dictionary.update({self.ID: self})
+            return dictionary
+        else:
+            dictionary = {self.ID: self}
+            for child in self.children:
+                dictionary.update(child.get_node_mappings())
+            return dictionary
+
     # This method merges two equal paths
     def merge_paths(self, node):
         self.occurrence += node.occurrence
@@ -443,24 +400,6 @@ class Node:
                     similarity = 0
                     if len(similarities) > 0:
                         similarity = sum(similarities) / float(len(similarities))
-                    # print(similarity)
-                    # print('~ Compute ~')
-                    # for template in compare_child.get_templates(''):
-                    #    print(' ' + template)
-                    # print('~ with ~')
-                    # for template in self.children[i].get_templates(''):
-                    #    print(' ' + template)
-                    # print(str(sum(similarities)) + '/' + str(len(similarities)) + '=' + str(similarity))
-                    # Never insert a variable when delimiters are involved
-                    # print(str(self.children[i].datatype) + str(self.children[i].element))
-                    # if self.parent is not None and self.parent.parent is not None and self.parent.parent.parent is not None and
-                    #       self.parent.parent.parent.element == 'msg':
-                    #    print(similarity)
-                    #    for template in compare_child.get_templates(''):
-                    #        print(' ' + template)
-                    #        print('~ with ~')
-                    #    for template in self.children[i].get_templates(''):
-                    #        print(' ' + template)
                     if similarity < min_similarity or any((c in self.children[i].element) for c in delimiters):
                         # Consecutive delimiters are merged during tree building, requires this kind of check
                         # Note that with this criteria, all branches must be similar to insert a variable. For future work, this could be
@@ -469,17 +408,11 @@ class Node:
                         break
 
                 # Never insert a variable when delimiters are involved
-                if all_children_similar:  # and compare_child.element not in delimiters:
+                if all_children_similar: # and compare_child.element not in delimiters:
                     # Insert a variable instead of a branch
-                    print('~ The following loglines are similar ~')
-                    for template in self.get_templates(''):
-                        print(' ' + template)
                     compare_child.element = '§'
                     compare_child.is_variable = True
                     for i in range(1, len(self.children)):
-                        print('~ The following loglines are merged ~')
-                        print(compare_child.get_templates(''))
-                        print(self.children[i].get_templates(''))
                         compare_child.datatype = [typ for typ in compare_child.datatype if typ in self.children[i].datatype]
                         compare_child.merge_similar_paths_enhanced(self.children[i], True)
                     self.children = [compare_child]
@@ -490,22 +423,8 @@ class Node:
 
     # This method merges two similar paths
     def merge_similar_paths(self, node, initial):
-        # print('Merging ' + str(self.element) + ' with ' + str(node.element))
-
-        # Nodes cannot simply be merged when one of the children is a variable, because this would mix variable and fixed elements after
-        # branch. Stop merging propagation and wait until similarities of children are computed in next iteration of insert_variables
-        # This did not work, the node.children branch was lost !!!
-        # if initial == False:
-        #    for child in self.children:
-        #        if child.is_variable == True:
-        #            return
-        #    for child in node.children:
-        #        if child.is_variable == True:
-        #            return
-
         self.occurrence += node.occurrence
         self.ending_lines += node.ending_lines
-        # self.ending_line_numbers.extend(node.ending_line_numbers) # For Evaluation, comment out if not needed
 
         if len(node.children) == 0:
             if len(self.children) != 0:
@@ -534,15 +453,8 @@ class Node:
             else:
                 for node_child in node.children:
                     if self_child.element == node_child.element:
-                        # or self_child.is_variable or node_child.is_variable: # In order to avoid branches between variable and fixed
-                        # children, fixed are always converted to variables in that case
                         if self_child.datatype != node_child.datatype:
                             self_child.datatype = ['string']
-                        # if self_child.is_variable != node_child.is_variable:
-                        #    self_child.is_variable = True
-                        #    self_child.element = '§'
-                        # node_child.is_variable = True
-                        # node_child.element = '§'
                         self_child.merge_similar_paths(node_child, False)
                     else:
                         self.children.append(node_child)
@@ -575,18 +487,9 @@ class Node:
                     for j in range(0, len(node.children)):
                         node_child = node.children[j]
                         if self_child.element == node_child.element:
-                            # or self_child.is_variable or node_child.is_variable: # In order to avoid branches between variable and fixed
-                            # children, fixed are always converted to variables in that case
                             if self_child.datatype != node_child.datatype:
                                 self_child.datatype = ['string']
-                            # if self_child.is_variable != node_child.is_variable:
-                            #    self_child.is_variable = True
-                            #    self_child.element = '§'
-                            # node_child.is_variable = True
-                            # node_child.element = '§'
                             self_child.merge_similar_paths(node_child, False)
-                            # if node_child in node_childs_to_be_added: # Needs to be checked because of converting fixed to variable after
-                            # branches enables that node_child fits more than once
                             node_childs_to_be_added.remove(node_child)
                             break
                 self.children.extend(node_childs_to_be_added)
@@ -595,22 +498,8 @@ class Node:
 
     # This method merges two similar paths
     def merge_similar_paths_enhanced(self, node, initial):
-        # print('Merging ' + str(self.element) + ' with ' + str(node.element))
-
-        # Nodes cannot simply be merged when one of the children is a variable, because this would mix variable and fixed elements after
-        # branch. Stop merging propagation and wait until similarities of children are computed in next iteration of insert_variables
-        # This did not work, the node.children branch was lost !!!
-        # if initial == False:
-        #    for child in self.children:
-        #        if child.is_variable == True:
-        #            return
-        #    for child in node.children:
-        #        if child.is_variable == True:
-        #            return
-
         self.occurrence += node.occurrence
         self.ending_lines += node.ending_lines
-        # self.ending_line_numbers.extend(node.ending_line_numbers) # For Evaluation, comment out if not needed
 
         if node.end:
             self.end = True
@@ -625,47 +514,33 @@ class Node:
                 for child in node.children:
                     child.parent = self
         else:
-            if True:  # Enhancement
-                i = 0
-                j = 0
-                while i < len(self.children) and j < len(node.children):
-                    # Elements match
-                    if self.children[i].element == node.children[j].element:
-                        # print('Match ' + str(self.children[i].element) + ' with ' + str(node.children[j].element))
-                        self.children[i].merge_similar_paths_enhanced(node.children[j], False)
-                        if self.children[i] == '§' and self.children[i].datatype != node.children[j].datatype:
-                            self.children[i].datatype = [typ for typ in self.children[i].datatype if typ in node.children[j].datatype]
+            i = 0
+            j = 0
+            while i < len(self.children) and j < len(node.children):
+                # Elements match
+                if self.children[i].element == node.children[j].element:
+                    # print('Match ' + str(self.children[i].element) + ' with ' + str(node.children[j].element))
+                    self.children[i].merge_similar_paths_enhanced(node.children[j], False)
+                    if self.children[i] == '§' and self.children[i].datatype != node.children[j].datatype:
+                        self.children[i].datatype = [typ for typ in self.children[i].datatype if typ in node.children[j].datatype]
+                    i += 1
+                    j += 1
+
+                # Match one node if possible
+                elif self.children[i].element > node.children[j].element:  # Match one child of self
+                    # Match the node with a variable if present
+                    # print('Cannot1 match ' + str(self.children[i].element))
+                    if node.children[-1].is_variable:
+                        # print('Match with Variable')
+                        self.children[i].merge_similar_paths_enhanced(node.children[-1], False)
+                        self.children[i].datatype = [typ for typ in node.children[j].datatype if typ in node.children[-1].datatype]
                         i += 1
-                        j += 1
+                    else:
+                        i += 1
 
-                    # Match one node if possible
-                    elif self.children[i].element > node.children[j].element:  # Match one child of self
-                        # Match the node with a variable if present
-                        # print('Cannot1 match ' + str(self.children[i].element))
-                        if node.children[-1].is_variable:
-                            # print('Match with Variable')
-                            self.children[i].merge_similar_paths_enhanced(node.children[-1], False)
-                            self.children[i].datatype = [typ for typ in node.children[j].datatype if typ in node.children[-1].datatype]
-                            i += 1
-                        else:
-                            i += 1
-
-                    else:  # Match one child of the node
-                        # print('Cannot2 match ' + str(node.children[j].element))
-                        # Match the node with a variable if present
-                        if self.children[-1].is_variable:
-                            # print('Match with Variable')
-                            self.children[-1].merge_similar_paths_enhanced(node.children[j], False)
-                            self.children[-1].datatype = [typ for typ in node.children[j].datatype if typ in node.children[-1].datatype]
-                            j += 1
-                        else:
-                            self.children.append(node.children[j])
-                            node.children[j].parent = self
-                            j += 1
-
-                # Match remaining nodes
-                while j < len(node.children):
-                    # print('Match remaining node: ' + str(node.children[j].element))
+                else:  # Match one child of the node
+                    # print('Cannot2 match ' + str(node.children[j].element))
+                    # Match the node with a variable if present
                     if self.children[-1].is_variable:
                         # print('Match with Variable')
                         self.children[-1].merge_similar_paths_enhanced(node.children[j], False)
@@ -676,54 +551,18 @@ class Node:
                         node.children[j].parent = self
                         j += 1
 
-            else:  # Original implementation
-                contains_variable = False
-                for node_child in node.children:
-                    if node_child.is_variable:
-                        contains_variable = True
-                        break
-                for self_child in self.children:
-                    if self_child.is_variable:
-                        contains_variable = True
-                        break
-
-                if contains_variable:
-                    result_child = self.children[0]
-                    result_child.datatype = ['string']
-                    result_child.is_variable = True
-                    result_child.element = '§'
-                    for node_child in node.children:
-                        result_child.merge_similar_paths(node_child, False)
-                    for i in range(1, len(self.children)):
-                        result_child.merge_similar_paths(self.children[i], False)
-                    self.children = [result_child]
+            # Match remaining nodes
+            while j < len(node.children):
+                # print('Match remaining node: ' + str(node.children[j].element))
+                if self.children[-1].is_variable:
+                    # print('Match with Variable')
+                    self.children[-1].merge_similar_paths_enhanced(node.children[j], False)
+                    self.children[-1].datatype = [typ for typ in node.children[j].datatype if typ in node.children[-1].datatype]
+                    j += 1
                 else:
-                    node_childs_to_be_added = node.children[:]
-                    for i in range(0, len(self.children)):
-                        self_child = self.children[i]
-                        for j in range(0, len(node.children)):
-                            node_child = node.children[j]
-                            if self_child.element == node_child.element:
-                                # or self_child.is_variable or node_child.is_variable: # In order to avoid branches between variable and
-                                # fixed children, fixed are always converted to variables in that case
-                                if self_child.datatype != node_child.datatype:
-                                    self_child.datatype = ['string']
-                                # if self_child.is_variable != node_child.is_variable:
-                                #    self_child.is_variable = True
-                                #    self_child.element = '§'
-                                # node_child.is_variable = True
-                                # node_child.element = '§'
-                                self_child.merge_similar_paths(node_child, False)
-                                # if node_child in node_childs_to_be_added: # Needs to be checked because of converting fixed to variable
-                                # after branches enables that node_child fits more than once
-                                node_childs_to_be_added.remove(node_child)
-                                break
-                    self.children.extend(node_childs_to_be_added)
-                    for node_child in node_childs_to_be_added:
-                        node_child.parent = self
-
-            # print('Merging ' + str(self.element) + ' with ' + str(node.element))
-            # print('Children: %s'%[child.element for child in self.children])
+                    self.children.append(node.children[j])
+                    node.children[j].parent = self
+                    j += 1
 
     # This method checks whether two paths are similar
     def get_path_similarities(self, node, initial, delimiters):
@@ -735,14 +574,8 @@ class Node:
 
         if len(node.children) == 0:
             pass
-            # If self branch still has some remaining nodes, add these as mismatches
-            # for child in self.children:
-            #    return_list.extend([0] * child.get_number_of_following_nodes())
         elif len(self.children) == 0:
             pass
-            # If node branch still has some remaining nodes, add these as mismatches
-            # for child in node.children:
-            #    return_list.extend([0] * child.get_number_of_following_nodes())
         elif len(self.children) == 1:
             for node_child in node.children:
                 return_list.extend(self.children[0].get_path_similarities(node_child, False, delimiters))
@@ -782,75 +615,52 @@ class Node:
             return_list = [1]
         else:
             return_list = []
-        # print([child.element for child in self.children])
-        # print([child.element for child in node.children])
 
         if len(node.children) == 0:
             pass
-            # If self branch still has some remaining nodes, add these as mismatches
-            # for child in self.children:
-            #    return_list.extend([0] * child.get_number_of_following_nodes())
         elif len(self.children) == 0:
             pass
-            # If node branch still has some remaining nodes, add these as mismatches
-            # for child in node.children:
-            #    return_list.extend([0] * child.get_number_of_following_nodes())
         elif len(self.children) == 1:
             for node_child in node.children:
                 return_list.extend(self.children[0].get_path_similarities_enhanced(node_child, False, delimiters))
         elif len(self.children) > 1:
-            if True:  # Enhancement
-                i = 0
-                j = 0
+            i = 0
+            j = 0
 
-                while i < len(self.children) and j < len(node.children):
-                    # Elements match
-                    if self.children[i].element == node.children[j].element:
-                        return_list.extend(self.children[i].get_path_similarities_enhanced(node.children[j], False, delimiters))
+            while i < len(self.children) and j < len(node.children):
+                # Elements match
+                if self.children[i].element == node.children[j].element:
+                    return_list.extend(self.children[i].get_path_similarities_enhanced(node.children[j], False, delimiters))
+                    # print('Match')
+                    # print(i, j, self.children[i].element, node.children[j].element)
+                    i += 1
+                    j += 1
+                # Match one node if possible
+
+                elif self.children[i].element > node.children[j].element:  # Match one child of self
+                    # Match the node with a variable if present
+                    if node.children[-1].is_variable:
+                        return_list.extend(self.children[i].get_path_similarities_enhanced(node.children[-1], False, delimiters))
                         # print('Match')
-                        # print(i, j, self.children[i].element, node.children[j].element)
+                        # print(i, j, self.children[i].element, node.children[-1].element)
                         i += 1
-                        j += 1
-                    # Match one node if possible
-
-                    elif self.children[i].element > node.children[j].element:  # Match one child of self
-                        # Match the node with a variable if present
-                        if node.children[-1].is_variable:
-                            return_list.extend(self.children[i].get_path_similarities_enhanced(node.children[-1], False, delimiters))
-                            # print('Match')
-                            # print(i, j, self.children[i].element, node.children[-1].element)
-                            i += 1
-                        else:
-                            return_list.extend([0] * self.children[i].get_number_of_following_nodes())
-                            # print('Mismatch')
-                            # print(i,j,self.children[i].element)
-                            i += 1
-                    else:  # Match one child of the node
-                        # Match the node with a variable if present
-                        if self.children[-1].is_variable:
-                            return_list.extend(self.children[-1].get_path_similarities_enhanced(node.children[j], False, delimiters))
-                            # print('Match')
-                            # print(i, j, self.children[-1].element, node.children[j].element)
-                            j += 1
-                        else:
-                            return_list.extend([0] * node.children[j].get_number_of_following_nodes())
-                            # print('Mismatch')
-                            # print(i,j,node.children[j].element)
-                            j += 1
-
-            else:  # original implementation of get_path_similarities
-                last_index = -1
-
-                for i in range(0, len(self.children)):
-                    if i < len(node.children):
-                        return_list.extend(self.children[i].get_path_similarities_enhanced(node.children[i], False, delimiters))
-                        # Requires that all branches were sorted before! (e.g., by calling sort_children)
                     else:
                         return_list.extend([0] * self.children[i].get_number_of_following_nodes())
-                    last_index = i
-
-                for i in range(last_index + 1, len(node.children)):
-                    return_list.extend([0] * node.children[i].get_number_of_following_nodes())
+                        # print('Mismatch')
+                        # print(i,j,self.children[i].element)
+                        i += 1
+                else:  # Match one child of the node
+                    # Match the node with a variable if present
+                    if self.children[-1].is_variable:
+                        return_list.extend(self.children[-1].get_path_similarities_enhanced(node.children[j], False, delimiters))
+                        # print('Match')
+                        # print(i, j, self.children[-1].element, node.children[j].element)
+                        j += 1
+                    else:
+                        return_list.extend([0] * node.children[j].get_number_of_following_nodes())
+                        # print('Mismatch')
+                        # print(i,j,node.children[j].element)
+                        j += 1
 
         # Since it is a branch, the initial elements will never match. Neither add 0 or 1 in that case
         if not initial:
@@ -868,154 +678,8 @@ class Node:
 
         return return_list
 
-    # This function matches the parser of self with the parser of the note and returns a list of the matched nodes with a similarity score
-    def get_subtree_match(self, node, delimiters):
-        debug_mode = False
-        element_list1 = self.get_elements([0], delimiters)
-        # Dictionary with the elements of the nodes as keys and a list of the paths to the nodes
-        elementList2 = node.get_elements([1], delimiters)
-
-        if debug_mode:
-            print('NewSubtreeMatch:')
-            print(element_list1)
-            print(elementList2)
-        # Matching of the entries with one match in both trees
-        element_list = {}
-        for key in element_list1:
-            if key in elementList2 and len(element_list1[key]) == 1 and len(elementList2[key]) == 1:
-                element_list[key] = [[element_list1[key][0], elementList2[key][0]]]
-
-        previous_matches = self.match_parser_nodes({}, element_list)
-        if debug_mode:
-            print('Result: %s' % previous_matches)
-
-        for i in range(2, 1 + max(max([len(element_list1[k]) for k in element_list1]), max([len(elementList2[k]) for k in elementList2]))):
-            element_list = {}
-            for key in element_list1:
-                if len(element_list1[key]) == i and key in elementList2 and (len(elementList2[key]) == 1 or len(elementList2[key]) >= i):
-                    element_list[key] = []
-                    for j in range(len(elementList2[key])):
-                        element_list[key] += [[element_list1[key][k], elementList2[key][j]] for k in range(len(element_list1[key]))]
-            for key in elementList2:
-                if len(elementList2[key]) == i and key in element_list1 and (len(element_list1[key]) == 1 or len(element_list1[key]) > i):
-                    element_list[key] = []
-                    for j in range(len(element_list1[key])):
-                        element_list[key] += [[element_list1[key][j], elementList2[key][k]] for k in range(len(elementList2[key]))]
-
-            previous_matches = self.match_parser_nodes(previous_matches, element_list)
-
-        return [previous_matches, sum(
-            [len(previous_matches[x]) for x in previous_matches]) / min(
-            sum([len(element_list1[x]) for x in element_list1]), sum([len(elementList2[x]) for x in elementList2]))]
-
-    # This function returns a Dictionary with the elements of the nodes as keys and a list of the paths to the nodes
-    def get_elements(self, previous_path, delimiters):
-        elementList = {}  # Dictionary with the elements of the nodes as keys and a list of the paths to the nodes
-
-        if str(self.element) not in delimiters and not self.is_variable:  # Add the element of the node if it is no delimiter
-            elementList = {str(self.element): [previous_path]}
-
-        for i in range(len(self.children)):  # Add the elements of the following nodes to the elementList
-            elementList2 = self.children[i].get_elements(previous_path + [i], delimiters)
-            for key in elementList2:
-                if key in elementList:
-                    elementList[key] += elementList2[key]
-                else:
-                    elementList[key] = elementList2[key]
-
-        return elementList
-
-    # This function gets a consistent set of matches of two trees and a set of possible matches. The function returns a consistent set of
-    # matches which includes the previous matches and the highest number of possible matches, such that the set stays consistent
-    def match_parser_nodes(self, previous_matches, new_matches):
-        debug_mode = False
-        if debug_mode:
-            print('Match:')
-            print('previous_matches: %s' % previous_matches)
-            print('new_matches: %s' % new_matches)
-        # Check if new matches are inconsistent to existing ones
-        keys = list(new_matches.keys())
-        if previous_matches != {}:
-            for i in range(len(keys) - 1, -1, -1):
-                for i1 in range(len(new_matches[keys[i]]) - 1, -1, -1):
-                    break2 = False
-                    for key2 in previous_matches:
-                        if break2:
-                            break2 = False
-                            break
-                        for i2 in range(len(previous_matches[key2]) - 1, -1, -1):
-                            if not self.is_consistent(new_matches[keys[i]][i1], previous_matches[key2][i2]):
-                                del new_matches[keys[i]][i1]
-                                break2 = True
-                                break
-                if not new_matches[keys[i]]:
-                    del new_matches[keys[i]]
-                    del keys[i]
-
-        # Check if new matches are inconsistent to each other
-        inconsistent_matches = []
-        for i in range(len(keys)):
-            for j in range(i, len(keys)):
-                for i2 in range(len(new_matches[keys[i]])):
-                    for j2 in range(len(new_matches[keys[j]])):
-                        if debug_mode and False:
-                            print('Is %s consistent with %s\n%s' % (new_matches[keys[i]][i2], new_matches[keys[j]][j2],
-                                  self.is_consistent(new_matches[keys[i]][i2], new_matches[keys[j]][j2])))
-                        if not self.is_consistent(new_matches[keys[i]][i2], new_matches[keys[j]][j2]):
-                            inconsistent_matches.append([i, j, i2, j2])
-
-        # Find minimal Indices so that every element is included at least once in every set
-        inconsistent_items = []
-        while len(inconsistent_matches) != 0:
-            count_list = [[0 for j in range(len(new_matches[keys[i]]))] for i in range(len(keys))]
-            for i in range(len(inconsistent_matches)):
-                count_list[inconsistent_matches[i][0]][inconsistent_matches[i][2]] += 1
-                count_list[inconsistent_matches[i][1]][inconsistent_matches[i][3]] += 1
-
-            # This section searches for a item to remove from the inconsistent_matches and takes the length of the mismatching into account
-            # ([[0],[1]] < [[0,1],[1,1,1,1,1,1,1,1,1]])
-            max_count = 0
-            tmp_index = 0
-            tmp_index2 = 0
-            for i in range(len(count_list)):
-                for i2 in range(len(count_list[i])):
-                    if count_list[i][i2] > max_count:
-                        max_count = count_list[i][i2]
-                        tmp_index = i
-                        tmp_index2 = i2
-                    elif count_list[i][i2] == max_count and abs(len(new_matches[keys[i]][i2][0]) - len(new_matches[keys[i]][i2][1])) > abs(
-                            len(new_matches[keys[tmp_index]][tmp_index2][0]) - len(new_matches[keys[tmp_index]][tmp_index2][1])):
-                        tmp_index = i
-                        tmp_index2 = i2
-                    elif count_list[i][i2] == max_count and abs(len(new_matches[keys[i]][i2][0]) - len(new_matches[keys[i]][i2][1])) == abs(
-                            len(new_matches[keys[tmp_index]][tmp_index2][0]) - len(new_matches[keys[tmp_index]][tmp_index2][1])) and max(
-                        len(new_matches[keys[i]][i2][0]), len(new_matches[keys[i]][i2][1])) > max(
-                            len(new_matches[keys[tmp_index]][tmp_index2][0]), len(new_matches[keys[tmp_index]][tmp_index2][1])):
-                        tmp_index = i
-                        tmp_index2 = i2
-            inconsistent_items.append([tmp_index, tmp_index2])
-
-            inconsistent_matches = [match for match in inconsistent_matches if (
-                    (match[0] != inconsistent_items[-1][0] or match[2] != inconsistent_items[-1][1]) and (
-                        match[1] != inconsistent_items[-1][0] or match[3] != inconsistent_items[-1][1]))]
-
-        inconsistent_items.sort(key=lambda x: x[1], reverse=True)
-
-        for i in range(len(inconsistent_items)):
-            del new_matches[keys[inconsistent_items[i][0]]][inconsistent_items[i][1]]
-
-        for key in new_matches:
-            if key in previous_matches:
-                previous_matches[key] += new_matches[key]
-            elif len(new_matches[key]) != 0:
-                previous_matches[key] = new_matches[key]
-
-        return previous_matches
-
     # This method matches the lists of all list nodes
     def match_lists(self, min_similarity):
-        debug_mode = False
-
         nodes = self.get_list_nodes()  # Get all nodes which have a list as elements
         value_list = []  # List of the values of the elementlists
         indices_list = []  # List of the assigned indices of the value_list
@@ -1025,16 +689,10 @@ class Node:
             for j in range(len(value_list)):
                 if len([True for element in nodes[i].element if element in value_list[j]]) / min(len(nodes[i].element), len(
                         value_list[j])) > min_similarity:
-                    if debug_mode:
-                        print('Merge list %s with list %s' % (nodes[i].element, value_list[j]))
-
                     indices_list.append(j)
                     for element in nodes[i].element:
                         if element not in value_list[j]:
                             value_list[j].append(element)
-
-                    if debug_mode:
-                        print('Result: %s' % (value_list[j]))
                     break
 
             # Add new values if they do not fit with any previous one
@@ -1042,24 +700,14 @@ class Node:
                 indices_list.append(len(value_list))
                 value_list.append(nodes[i].element)
 
-        if debug_mode:
-            print('IndicesList: %s' % indices_list)
-            print('ValueList: %s' % value_list)
-
         # Check if the value lists can be further merged together
         not_stable_indices = list(range(len(value_list)))
         while len(not_stable_indices) > 0:
-            if debug_mode:
-                print('not_stable_indices: %s' % not_stable_indices)
-
             is_stable = True
             for i in range(1, len(value_list)):
                 if i != not_stable_indices[0] and type(value_list[i]) is list and len(
                         [True for element in value_list[i] if element in value_list[not_stable_indices[0]]]) / min(
                         len(value_list[i]), len(value_list[not_stable_indices[0]])) > min_similarity:
-                    if debug_mode:
-                        print('Merge list %s with list %s' % (value_list[not_stable_indices[0]], value_list[i]))
-
                     # Extend the values
                     for element in value_list[i]:
                         if element not in value_list[not_stable_indices[0]]:
@@ -1070,13 +718,8 @@ class Node:
                     if i in not_stable_indices:
                         del not_stable_indices[not_stable_indices.index(i)]
                     break
-
             if is_stable:
                 del not_stable_indices[0]
-
-        if debug_mode:
-            print('IndicesList after merging: %s' % indices_list)
-            print('ValueList: %s' % value_list)
 
         # Assign the new expanded lists
         for i in range(len(nodes)):
@@ -1100,7 +743,6 @@ class Node:
     # This function checks if the the two pairs would result in a incosistency if both would be matched.
     # Inconsistencies are pairings, which would result in a violation of the predecessor-successor like [[1], [0,1]], [[1,1], [0]]
     def is_consistent(self, pair1, pair2):
-
         # Cases one entry is equal
         if pair1[0] == pair2[0]:
             if pair1[1] == pair2[1]:
@@ -1150,228 +792,9 @@ class Node:
             1][:len(pair2[1])] == pair2[1]:
             return False
 
-        # No found predecessor/successorrelation
+        # No found predecessor/successor relation
         else:
             return True
-
-    # This function merges the node self with node. The set of the matches includes the matched nodes in the subtrees.
-    def merge_subtree_matches(self, node, matches, pos0, pos1, first_merge=True):
-        debug_mode = False
-
-        # Get the pairs without the element-values
-        if type(matches) is dict:
-            new_previous_matches = []
-            for key in matches:
-                new_previous_matches += matches[key]
-            matches = new_previous_matches
-            matches.sort()
-
-        if not matches:
-            self.merge_subtrees(node)
-
-        else:  # matches != []
-            [next_matches, next_subtrees] = self.next_matches(matches, pos0)
-            if debug_mode:
-                print('next_matches: %s \nnext_subtrees: %s' % (next_matches, next_subtrees))
-
-            for i in range(len(next_matches)):
-                if debug_mode:
-                    print('\n\n\n')
-                    print('Follow the path %s from node %s' % (next_matches[i][0][len(pos0):], self.element))
-                    print('Element 1:', self.element)
-                    print('Element 2:', node.element)
-                    print('Path 1:', next_matches[i][0], pos0)
-                    print('Path 2:', next_matches[i][1], pos1)
-
-                self.merge_to_single_path(node, next_matches[i], next_matches, pos0, pos1)
-
-                self.follow_path(next_matches[i][0][len(pos0):]).merge_subtree_matches(
-                    node.follow_path(next_matches[i][1][len(pos1):]), next_subtrees[i], next_matches[i][0], next_matches[i][1],
-                    first_merge=False)
-
-            if first_merge:
-                # Merge endnodes and adding the optional nodes of node to self
-                for tuple1 in self.merge_tuple:
-                    if debug_mode:
-                        print('Tupple:')
-                        print('0\n', tuple1[0])
-                        print('1\n', tuple1[1])
-                        print('2\n', tuple1[2])
-                        print('3\n', tuple1[3])
-                        print('4\n', tuple1[4])
-
-                    if tuple1[1] in tuple1[0].children:
-                        tuple1[1].merge_node(tuple1[4])
-
-                        [new_node, new_end_node] = tuple1[2].deepcopy(tuple1[3])
-                        tuple1[2] = new_node
-                        tuple1[3] = new_end_node
-
-                        # Check cases that can appear if the paths are not disjunkt
-                        if tuple1[2] not in tuple1[0].children:
-                            tuple1[3].children = [tuple1[1]]
-                            tuple1[1].parent = tuple1[3]
-                        else:
-                            tuple1[3].children.append(tuple1[1])
-                            tuple1[1].parent = tuple1[3]
-
-                        del tuple1[0].children[tuple1[0].children.index(tuple1[1])]
-
-                        if tuple1[2] not in tuple1[0].children:
-                            tuple1[0].children.append(tuple1[2])
-                            tuple1[2].parent = tuple1[0]
-
-                        # Check if the optional part is already present in optional_node_pairs
-                        if [tuple1[2], tuple1[1]] not in self.optional_node_pairs:
-                            node.optional_node_pairs.append([tuple1[2], tuple1[1]])
-                self.merge_tuple.clear()
-
-    # This method merges two nodes, without matches and merges the variable nodes if present.
-    def merge_subtrees(self, node):
-        self.merge_node(node)
-
-        if len(self.children) == 0:
-            self.end = True
-
-        for i in range(len(node.children)):
-            if node.children[i].is_variable:
-                contains_variable = False
-                for child in self.children:
-                    if child.is_variable:
-                        contains_variable = True
-                        child.merge_subtrees(node.children[i])
-                        break
-                if not contains_variable:
-                    self.children.append(node.children[i])
-                    node.children[i].parent = self
-            else:
-                self.children.append(node.children[i])
-                node.children[i].parent = self
-
-    # This method returns a list, which contains the next matches and the corresponding matches in their subtrees
-    def next_matches(self, matches, pos0):
-
-        if len(matches) == 0 or len(matches) == 1 and matches[0][0] == pos0:
-            return [[], []]
-
-        if matches[0][0] == pos0:
-            del matches[0]
-
-        next_matches = [matches[0]]  # Next matches
-        next_subtrees = [[]]  # List of the subtrees of the nodes to the next matches
-
-        for i in range(1, len(matches)):
-            if next_matches[-1][0] != matches[i][0][:len(next_matches[-1][0])]:
-                next_matches.append(matches[i])
-                next_subtrees.append([])
-            else:
-                next_subtrees[-1].append(matches[i])
-
-        return [next_matches, next_subtrees]
-
-    # This method returns the successor node, which is reached after following the path
-    def follow_path(self, path):
-        node = self
-        for i in range(len(path)):
-            node = node.children[path[i]]
-        return node
-
-    # This method merges two paths into one and adds the additional branches
-    def merge_to_single_path(self, node, pair, next_matches, pos0, pos1):
-        debug_mode = False
-
-        # Merge nodes
-        self.merge_node(node)
-
-        # Add not matched branch children of node to self
-        for i in range(len(node.children)):
-            if not any(pos1 + [i] == pos[1][:len(pos1) + 1] for pos in next_matches) and node.children[i] not in self.children:
-                if debug_mode:
-                    print('Added branch: %s (Path: %s)' % (node.children[i].element, pos1 + [i]))
-
-                if node.children[i].is_variable:
-                    contains_variable = False
-                    for child in self.children:
-                        if child.is_variable:
-                            contains_variable = True
-                            child.merge_subtrees(node.children[i])
-                            break
-                    if not contains_variable:
-                        self.children.append(node.children[i])
-                        node.children[i].parent = self
-
-                else:
-                    self.children.append(node.children[i])
-                    node.children[i].parent = self
-
-        tmp_self = self
-        tmp_node = node
-
-        for i in range(min(len(pair[0]) - len(pos0), len(pair[1]) - len(pos1)) - 1):
-            tmp_self = tmp_self.followPath([pair[0][len(pos0) + i]])
-            tmp_node = tmp_node.followPath([pair[1][len(pos1) + i]])
-            if debug_mode:
-                print('Match %s with %s' % (tmp_self.element, tmp_node.element))
-
-            # Merge the nodes because they lie on the matched path
-            # print('%s-%s'%(tmp_self.element, tmp_node.element))
-            tmp_self.merge_node(tmp_node)
-
-            # Add not matched branch children
-            for j in range(len(tmp_node.children)):
-                if not any(pair[1][:len(pos1) + i + 1] + [j] == tmpPos[1][:len(pos1) + i + 2] for tmpPos in next_matches) and \
-                        tmp_node.children[j] not in tmp_self.children:
-                    if debug_mode:
-                        print('Added branch: %s (Path: %s)' % (tmp_node.children[j].element, pair[1][:len(pos1) + i + 1] + [j]))
-
-                    if tmp_node.children[j].is_variable:
-                        contains_variable = False
-                        for child in tmp_self.children:
-                            if child.is_variable:
-                                contains_variable = True
-                                child.merge_subtrees(tmp_node.children[j])
-                                break
-                        if not contains_variable:
-                            tmp_self.children.append(tmp_node.children[j])
-                            tmp_node.children[j].parent = tmp_self
-
-                    else:
-                        tmp_self.children.append(tmp_node.children[j])
-                        tmp_node.children[j].parent = tmp_self
-
-        if len(pair[0]) - len(pos0) < len(pair[1]) - len(pos1):
-            if debug_mode:
-                print('Add nodes of node to self and make them optional')
-                print(len(pair[1]), len(pos1), len(pair[0]), len(pos0))
-                print(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0)], len(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0)]))
-                print(pair[1][len(pos1):], len(pair[1][len(pos1):]))
-                print('Last unmatched: %s - %s' % (
-                    str(node.follow_path(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0) - 2]).element) + str(
-                        node.follow_path(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0) - 1]).element),
-                    str(self.follow_path(pair[0][len(pos0):-2]).element) + str(self.follow_path(pair[0][len(pos0):-1]).element)))
-                print('Optional elements: %s' % [node.follow_path(pair[1][len(pos1):i]).element for i in
-                    range(len(pos1) + len(pair[0]) - len(pos0), len(pair[1]))])
-                print('First optional element: %s' % node.follow_path(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0)]).element)
-                print('Next Matched: %s - %s' % (
-                    node.follow_path(pair[1][len(pos1):]).element, self.follow_path(pair[0][len(pos0):]).element))
-
-            # Appending the tupple of certain nodes to be able to later insert the optional part into the parser
-            self.merge_tuple.append([
-                self.follow_path(pair[0][len(pos0):-1]), self.follow_path(pair[0][len(pos0):]),
-                node.follow_path(pair[1][len(pos1):len(pos1) + len(pair[0]) - len(pos0)]), node.follow_path(pair[1][len(pos1):-1]),
-                node.follow_path(pair[1][len(pos1):])])
-
-        elif len(pair[0]) - len(pos0) > len(pair[1]) - len(pos1):
-            if debug_mode:
-                print('Make nodes of self optional')
-                print(len(pair[0]), len(pos0), len(pair[1]), len(pos1))
-                print(pair[0][len(pos0):len(pos0) + len(pair[1]) - len(pos1)], len(pair[0][len(pos0):len(pos0) + len(pair[1]) - len(pos1)]))
-                print(pair[0][len(pos0):], len(pair[0][len(pos0):]))
-
-            if [self.follow_path(pair[0][len(pos0):len(pos0) + len(pair[1]) - len(pos1)]),
-                    self.follow_path(pair[0][len(pos0):])] not in self.optional_node_pairs:
-                self.optional_node_pairs.append(
-                    [self.follow_path(pair[0][len(pos0):len(pos0) + len(pair[1]) - len(pos1)]), self.follow_path(pair[0][len(pos0):])])
 
     # This method changes the attributes of self to allow matching of both self and node
     def merge_node(self, node):
@@ -1407,204 +830,6 @@ class Node:
                     self.optional_node_pairs[i][0] = self
                 if node == self.optional_node_pairs[i][1]:
                     self.optional_node_pairs[i][1] = self
-
-    # This function finds subtrees in the parser and return the IDs of the root nodes
-    # Parsertrees with multiple parents are not supported (Remove matchedSubtreeIndices + Save number of inclusions in subtrees)
-    def get_subtrees(self, min_height):
-        debug_mode = False
-        subtree_list = [node for node in self.get_leaves()]
-        tmp_dict = {}
-
-        tmp_list = []  # List of the list elements
-        tmp_node_list = []  # List of the corresponding nodes
-        for i in range(len(subtree_list)):
-            if type(subtree_list[i].element) is list:
-                if subtree_list[i].element in tmp_list:
-                    tmp_node_list[tmp_list.index(subtree_list[i].element)].append(i)
-                else:
-                    tmp_list.append(subtree_list[i].element)
-                    tmp_node_list.append([i])
-            else:
-                if subtree_list[i].element in tmp_dict:
-                    tmp_dict[subtree_list[i].element].append(i)
-                else:
-                    tmp_dict[subtree_list[i].element] = [i]
-
-        subtree_list = [[subtree_list[k] for k in tmp_dict[key]] for key in tmp_dict] + [
-            [subtree_list[k] for k in tmp_node_list[k2]] for k2 in range(len(tmp_node_list))]  # List of roots of equal subtrees
-        height_list = [0, len(subtree_list)]
-
-        if debug_mode:
-            print([[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in subtree_list])
-
-        while True:
-            for i in range(height_list[-2], height_list[-1]):
-                matched_subtree_indices = []  # List of the indices of the subtreetypes, which have already been matched
-                for j in range(len(subtree_list[i])):
-
-                    # Check if the subtree has already been matched
-                    if j in matched_subtree_indices:
-                        continue
-
-                    if debug_mode and subtree_list[i][j].parent.parent.element is not None:
-                        print('Try to match: %s of %s' % (str(subtree_list[i][j].element), str(
-                            subtree_list[i][j].parent.parent.element) + str(subtree_list[i][j].parent.element) + str(
-                            subtree_list[i][j].element)))
-
-                    children_index = []
-                    all_children_matched = True
-                    for child in subtree_list[i][j].parent.children:
-                        if child == subtree_list[i][j]:
-                            children_index.append(i)
-                            continue
-
-                        child_match = False
-                        for i2 in range(height_list[-1]):
-                            if child in subtree_list[i2]:
-                                child_match = True
-                                children_index.append(i2)
-                                break
-
-                        if not child_match:
-                            all_children_matched = False
-                            break
-
-                    if not all_children_matched:
-                        if debug_mode:
-                            print('At least one child could not be matched')
-                    # Search for another subtree, which is equal to the indiced subtree of self.parent
-                    if all_children_matched:
-                        if debug_mode:
-                            print('Try to find a similar subtree')
-
-                        indices_list = []  # List of the indices, which are used to remove the other matched subtrees
-                        parents_list = [subtree_list[i][j].parent]  # List of the parents of matched subtrees
-
-                        for j2 in range(j + 1, len(subtree_list[i])):
-                            # Check if the subtree has already been matched
-                            if j2 in matched_subtree_indices:
-                                continue
-
-                            if subtree_list[i][j].parent.element == subtree_list[i][j2].parent.element and len(
-                                    subtree_list[i][j].parent.children) == len(subtree_list[i][j2].parent.children):
-                                all_children_matched = True
-
-                                if debug_mode:
-                                    print('Check if all children are equal to the reference children')
-                                # Checks if the children are the same subtrees. This works because the braches are ordered
-                                for i2 in range(len(subtree_list[i][j2].parent.children)):
-                                    if subtree_list[i][j2].parent.children[i2] == subtree_list[i][j2]:
-                                        continue
-                                    elif subtree_list[i][j2].parent.children[i2] in subtree_list[children_index[i2]]:
-                                        continue
-                                    else:
-                                        all_children_matched = False
-                                        break
-
-                                # If the subtree matches the reference, add the neighbors to the indices_list
-                                if all_children_matched:
-                                    parents_list.append(subtree_list[i][j2].parent)
-                                    matched_subtree_indices.append(j2)
-
-                                    for i2 in range(len(subtree_list[i][j2].parent.children)):
-                                        if debug_mode:
-                                            print('Check if children is in the same subtree_list as the other')
-                                        if i != children_index[i2]:
-                                            indices_list.append([children_index[i2], subtree_list[children_index[i2]].index(
-                                                subtree_list[i][j2].parent.children[
-                                                    i2])])
-                                            # print('Add 1: %s'%[children_index[i2],subtree_list[children_index[i2]].index(
-                                            # subtree_list[i][j2].parent.children[i2])])
-
-                        if len(parents_list) > 1:
-                            if debug_mode:
-                                print('ParentList: %s' % [str(parents_list[k].parent.element) + str(
-                                    parents_list[k].element) for k in range(len(parents_list))])
-                            matched_subtree_indices.append(j)
-
-                            # check if the node is an variable and updates the datatype
-                            if parents_list[0].is_variable:
-                                tmp_list = [typ for typ in parents_list[0].datatype if all(
-                                    typ in parents_list[k].datatype for k in range(1, len(parents_list)))]
-                                for k in range(len(parents_list)):
-                                    parents_list[k].datatype = tmp_list
-
-                            if any(parents_list[k].end for k in range(len(parents_list))):
-                                for k in range(len(parents_list)):
-                                    parents_list[k].end = True
-
-                            # Add the neighbors of the first subtree into the indices_list
-                            for i2 in range(len(subtree_list[i][j].parent.children)):
-                                if i != children_index[i2]:
-                                    indices_list.append([children_index[i2], subtree_list[children_index[i2]].index(
-                                        subtree_list[i][j].parent.children[
-                                            i2])])
-                                    # print('Add 2: %s'%[children_index[i2],subtree_list[children_index[i2]].index(
-                                    # subtree_list[i][j].parent.children[i2])])
-
-                            indices_list.sort(reverse=True)
-                            if debug_mode:
-                                print('Remove the children from the indices_list')
-                                print(
-                                    [[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in
-                                        subtree_list])
-                                print(indices_list)
-                                print(len(subtree_list))
-                            # print(indices_list)
-                            for pair in indices_list:
-                                del subtree_list[pair[0]][pair[1]]
-                            if debug_mode:
-                                print(
-                                    [[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in
-                                        subtree_list])
-
-                                print('Add the subtrees to the subtree-list')
-                            subtree_list.append(parents_list)
-                            if debug_mode:
-                                print(
-                                    [[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in
-                                        subtree_list])
-
-                if len(matched_subtree_indices) > 1:
-                    # Remove the matched subtrees of the current subtree
-                    matched_subtree_indices.sort(reverse=True)
-                    if debug_mode:
-                        print('Remove the children from the current subtree_list')
-                        print([[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(
-                            len(subtree))] for subtree in subtree_list])
-                        print(i, matched_subtree_indices)
-                    for j in matched_subtree_indices:
-                        del subtree_list[i][j]
-                    if debug_mode:
-                        print([[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(
-                            len(subtree))] for subtree in subtree_list])
-
-            # Track the height of the subtrees
-            height_list.append(len(subtree_list))
-            # Check if new subtrees were found, or if the number of subtrees has not increased
-            if height_list[-1] == height_list[-2]:
-                break
-
-        if debug_mode:
-            print('Delete subtrees with a smaller height/subtrees with less than two entries')
-        if min_height < len(height_list):
-            for k in range(len(subtree_list) - 1, -1, -1):
-                if len(subtree_list[k]) < 2 or k < height_list[min_height]:
-                    del subtree_list[k]
-        else:
-            # No Subtree has the minimum height
-            subtree_list = []
-
-        # Add the subtrees for the optional elements
-        for pair in self.optional_node_pairs:
-            if not any(pair[1] in subtree for subtree in subtree_list):
-                subtree_list.append([pair[1]])
-
-        if debug_mode:
-            print('Return subtreeNodes')
-            print([[str(subtree[k].parent.element) + str(subtree[k].element) for k in range(len(subtree))] for subtree in subtree_list])
-
-        return subtree_list
 
     def get_number_of_following_nodes(self):
         if len(self.children) == 0:
@@ -1740,8 +965,8 @@ class Node:
                     # Log line ends at this node
                     # new_node.ending_line_numbers.append(log_line_id)
                     # For Evaluation, comment out if not needed
-            new_node.occurrence = len(
-                log_line_dict)  # It is a variable node, so all log lines received from parent node in previous step occur here
+            # It is a variable node, so all log lines received from parent node in previous step occur here
+            new_node.occurrence = len(log_line_dict)
             if ending_lines / float(self.occurrence) >= theta4:
                 new_node.end = True
                 new_node.ending_lines = ending_lines
@@ -1832,7 +1057,7 @@ class Node:
                     if depth < len(log_line.words) - 1:
                         new_dict[log_line_id] = log_line
                     elif depth == len(log_line.words) - 1:
-                        ending_lines += 1  # new_node.ending_line_numbers.append(log_line_id) # For Evaluation, comment out if not needed
+                        ending_lines += 1
                 new_node.occurrence = len(log_line_dict)
                 if ending_lines / float(self.occurrence) >= theta4:
                     new_node.end = True
@@ -1865,11 +1090,7 @@ class Node:
                                 new_dict[log_line_id] = log_line
                             elif depth == len(log_line.words) - 1:
                                 ending_lines += 1
-                                # new_node.ending_line_numbers.append(log_line_id)
-                                # For Evaluation, comment out if not needed
                     new_node.occurrence = occurrences
-                    # if new_node.occurrence == 1:
-                    #    continue
                     self.children.append(new_node)
                     if ending_lines / float(self.occurrence) >= theta4:
                         new_node.end = True
@@ -1902,8 +1123,6 @@ class Node:
                                 new_dict[log_line_id] = log_line
                             elif depth == len(log_line.words) - 1:
                                 ending_lines += 1
-                                # new_node.ending_line_numbers.append(log_line_id)
-                                # For Evaluation, comment out if not needed
                     new_node.occurrence = sum_frequency2
                     if ending_lines / float(self.occurrence) >= theta4:
                         new_node.end = True
@@ -1929,7 +1148,7 @@ class Node:
                     if depth < len(log_line.words) - 1:
                         new_dict[log_line_id] = log_line
                     elif depth == len(log_line.words) - 1:
-                        ending_lines += 1  # new_node.ending_line_numbers.append(log_line_id) # For Evaluation, comment out if not needed
+                        ending_lines += 1
                 new_node.occurrence = len(log_line_dict)
                 if ending_lines / float(self.occurrence) >= theta4:
                     new_node.end = True
@@ -2187,8 +1406,6 @@ class Node:
     def check_consistency(self):
         for child in self.children:
             if child.parent != self or not child.check_consistency():
-                if False and child.parent != self:
-                    print(self)
                 return False
         return True
 
