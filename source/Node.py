@@ -1365,24 +1365,6 @@ class Node:
 
             return return_string
 
-    # this method returns the assigning of the subtrees for the AMiner
-    def write_config_subtrees(self, id1, subtree_list):
-
-        self.sort_subtrees(subtree_list)
-
-        return_string = ''
-        if subtree_list:
-            for i in range(len(subtree_list)):
-                return_string += '\tsub_tree' + str(i) + ' = ' + 'SequenceModelElement(\'sequence' + str(id1.value) + '\', [\n' + \
-                                 subtree_list[i][0].write_config(2, id1, subtree_list, ignore_first_subtree=True)[:-2] + '])\n\n'
-                # [:-2] removes comma following last ModelElement and tabulator preceding first ModelElement
-
-        return return_string + '\n'
-
-    # Sorts the subtree_list in ascending order
-    def sort_subtrees(self, subtree_list):
-        subtree_list.sort(key=lambda x: x[0].subtree_height())
-
     # This method checks whether the words occurring at a node have a specific data type
     def determine_datatype(self, words):
         for elem in words:
