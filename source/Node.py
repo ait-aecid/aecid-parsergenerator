@@ -1220,7 +1220,8 @@ class Node:
             elif 'datetime' in self.datatype:
                 variable_parser_model = 'DateTimeModelElement(\'datetime' + str(id1.value) + '\'),\n'
             elif 'float' in self.datatype:
-                variable_parser_model = 'DecimalFloatValueModelElement(\'float' + str(id1.value) + '\'),\n'
+                variable_parser_model = 'DecimalFloatValueModelElement(\'float' + str(
+                id1.value) + '\', value_sign_type=DecimalFloatValueModelElement.SIGN_TYPE_OPTIONAL),\n'
             else:
                 variable_parser_model = 'VariableByteDataModelElement(\'string' + str(id1.value) + '\', alphabet),\n'
 
