@@ -175,17 +175,6 @@ with open(PGConfig.tree_file, 'wb') as file:
 lists = root.get_clusters()
 print('Store ' + str(len(lists)) + ' clusters')
 
-# file_list = os.listdir(PGConfig.results_dir)
-# for file_name in file_list:
-#    os.remove(PGConfig.results_dir + file_name)
-
-# template_id = 0
-# for list in lists:
-#    template_id += 1
-#    with open(str(PGConfig.results_dir) + 'template' + str(template_id) + '.txt', 'wb') as file:
-#        for line_id in list:
-#            file.write((str(line_id) + '\n').encode())
-
 with open(str(PGConfig.templates_file), 'wb') as file:
     for template in root.get_templates(''):
         file.write((template + '\n').encode())
