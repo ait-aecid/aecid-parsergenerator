@@ -234,7 +234,6 @@ config += 'from aminer.parsing import VariableByteDataModelElement\n'
 config += '\n'
 config += 'def get_model():\n'
 config += '\talphabet = b\'' + alphabet + '\'\n'
-config += root.write_config_subtrees(ID, subtree_list)  # Adding the subtrees to the config
 config += '\tmodel = ' + root.write_config(1, ID, subtree_list)[1:-2] + '\n\n'
 # [1:-2] removes newline and comma following last ModelElement and tabulator preceding first ModelElement
 config += '\treturn model'
