@@ -14,4 +14,4 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 class GlobalID:
     """This class describes a global id"""
     def __init__(self):
-        self.value = 0
+        self.value = -1
