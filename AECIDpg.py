@@ -285,4 +285,4 @@ if PGConfig.visualize is True:
 
     plt.figure(1,figsize=(12,18)) 
     nx.draw(G, pos=pos, node_color=colors, labels=labels, node_size=400, font_size=12, width=0.5, arrowsize=5, with_labels=True)
-    plt.savefig(PGConfig.visualization_file, dpi=1000)
+    plt.savefig(PGConfig.visualization_file, dpi=300)
