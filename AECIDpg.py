@@ -207,7 +207,6 @@ print('Write parser')
 config = '"""This module defines a generated parser model."""\n'
 config += '\n'
 config += 'from aminer.parsing import AnyByteDataModelElement\n'
-config += 'from aminer.parsing import AnyMatchModelElement\n'
 config += 'from aminer.parsing import Base64StringModelElement\n'
 config += 'from aminer.parsing import DateTimeModelElement\n'
 config += 'from aminer.parsing import DecimalFloatValueModelElement\n'
@@ -243,11 +242,13 @@ if PGConfig.visualize is True:
     print('Print tree as network')
 
     G = nx.DiGraph()
-    G.add_edges_from(root.get_node_connections())
+    node_connections = sorted(root.get_node_connections(), key=lambda tup: tup[1])
+    G.add_edges_from(node_connections)
 
     mappings = root.get_node_mappings()
+    mappings = dict(sorted(mappings.items()))
     mappings.update({1: root})
-
+    
     labels = {}
     colors = []
     label_nodes = True
@@ -264,9 +265,9 @@ if PGConfig.visualize is True:
                     special_datatype = True
 
             if special_datatype:
-                colors.append('lightblue')
-            else:
                 colors.append('blue')
+            else:
+                colors.append('lightblue')
         else:
             if label_nodes:
                 labels[entry] = mappings[entry].element
@@ -285,7 +286,7 @@ if PGConfig.visualize is True:
                     colors.append('red')
 
     pos = graphviz_layout(G, prog='dot')
-    nx.draw(G, pos=pos, node_color=colors, labels=labels, node_size=30, font_size=2, width=0.3, arrowsize=2, with_labels=True)
+    nx.draw(G, pos=pos, node_color=colors, labels=labels, node_size=100, font_size=9, width=0.5, arrowsize=5, with_labels=True)
     # A = to_agraph(G)
     # A.layout('dot')
     # A.draw(PGConfig.visualization_file)
