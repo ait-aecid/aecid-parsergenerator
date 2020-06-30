@@ -10,7 +10,7 @@ theta4 = 0.0001
 theta5 = 0.0001
 theta6 = 0.001  # Threshold for optional nodes in branches.
 damping = 0.0
-merge_similarity = 0.7
+merge_similarity = 1.1
 delimiters = [' ', '=']
 force_branch = []
 force_var = []

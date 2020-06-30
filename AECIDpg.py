@@ -144,8 +144,6 @@ root.build_tree(0, log_line_dict, delimiters, PGConfig.theta1, PGConfig.theta2, 
 print('Sort branches')
 root.sort_children()
 
-subtree_list = []
-
 # Insert variables when branches are followed by similar paths
 print('Refine tree by aggregating similar paths')
 root.insert_variables(PGConfig.merge_similarity, delimiters, 0, PGConfig.force_branch)
@@ -164,7 +162,7 @@ root.sort_children()
 
 # Reduce tree complexity by grouping subsequent fixed nodes into single nodes
 print('Aggregate fixed word elements')
-root.aggregate_sequences(subtree_list)
+root.aggregate_sequences()
 
 # Print Tree in textual form using Depth First Search
 print('Store tree')
@@ -222,7 +220,7 @@ config += 'from aminer.parsing import VariableByteDataModelElement\n'
 config += '\n'
 config += 'def get_model():\n'
 config += '\talphabet = b\'' + alphabet + '\'\n'
-config += '\tmodel = ' + root.write_config(1, ID, subtree_list)[1:-2] + '\n\n'
+config += '\tmodel = ' + root.write_config(1, ID)[1:-2] + '\n\n'
 # [1:-2] removes newline and comma following last ModelElement and tabulator preceding first ModelElement
 config += '\treturn model'
 

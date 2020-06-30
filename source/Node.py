@@ -923,7 +923,7 @@ class Node:
                 words.append(log_line.words[depth])
 
         counter = Counter(words)
-
+        
         sum_frequency = 0
         sum_frequency2 = 0  # Sum of the frequency of log lines, which did not surpass theta1
         max_count = -1
@@ -944,10 +944,20 @@ class Node:
             for dt in new_node.datatype:
                 if dt in ['integer', 'float', 'datetime', 'ipaddress', 'base64', 'hex']:
                     special_datatype = True
-
+        
         # Always do a variable if all branches are unique, i.e., max_count == 1
         # Also, never do a variable for delimiters
+        #print(counter)
+        #print(len(log_line_dict))
+        #print('a')
+        #print(list1)
+        #print(delimiter_flag)
+        #print(special_datatype)
+        #print(depth)
+        #print(force_var)
+        #print(sum_frequency)
         if not delimiter_flag and (len(list1) == 0 or special_datatype or depth in force_var):
+            #print('c1')
             # Case 1
             new_node.element = '§'
             new_node.is_variable = True
@@ -981,6 +991,7 @@ class Node:
         elif len(list1) == 1:
             # Case 2
             if counter[list1[0]] / float(len(log_line_dict)) >= theta2 or delimiter_flag == True:
+                #print('c2a')
                 # Case 2 a)
                 new_node.element = list1[0]
                 new_node.parent = self
@@ -1045,6 +1056,7 @@ class Node:
                     new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
                                         force_branch, force_var)
             else:
+                #print('c2b')
                 # Case 2 b)
                 new_node.element = '§'
                 new_node.is_variable = True
@@ -1073,6 +1085,7 @@ class Node:
         elif len(list1) > 1:
             # Case 3
             if sum_frequency / float(len(log_line_dict)) > theta3 or delimiter_flag:
+                #print('c3a')
                 # Case 3 a)
                 for element in list1:
                     new_node = Node(self.optional_node_pairs, self.merge_tuple)
@@ -1136,6 +1149,7 @@ class Node:
                     new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
                                         force_branch, force_var)
             else:
+                #print('c3b')
                 # Case 3 b)
                 new_node.element = '§'
                 new_node.is_variable = True
@@ -1275,7 +1289,7 @@ class Node:
             elif self.is_list:
                 id1.value += 1
                 self.ID = id1.value
-                return_string += '\t' * depth + 'FixedWordlistDataModelElement(\'fixed' + str(id1.value) + 'b\', ' + str(
+                return_string += '\t' * depth + 'FixedWordlistDataModelElement(\'fixed' + str(id1.value) + '\', ' + str(
                     agg_elements) + '),\n'
             elif self.is_variable:
                 return_string += '\t' * depth + variable_parser_model
