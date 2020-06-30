@@ -263,7 +263,7 @@ if PGConfig.visualize is True:
                     special_datatype = True
 
             if special_datatype:
-                colors.append('blue')
+                colors.append('lightblue')
             else:
                 colors.append('lightblue')
         else:
@@ -281,10 +281,49 @@ if PGConfig.visualize is True:
                 if mappings[entry].is_list:
                     colors.append('darkred')
                 else:
-                    colors.append('red')
+                    colors.append('lightsalmon')
 
     pos = graphviz_layout(G, prog='dot')
-    nx.draw(G, pos=pos, node_color=colors, labels=labels, node_size=100, font_size=9, width=0.5, arrowsize=5, with_labels=True)
+
+    # FOR EXIM
+    colors[0] = 'lime'
+    for entry in labels:
+      if labels[entry] is not None and not isinstance(labels[entry], list) and labels[entry] != '':
+        labels[entry] = '"' + labels[entry] + '"'
+    #labels[1] = 'root'
+    #labels[2] = '"Start queue\nrun: pid="'
+    #labels[3] = 'pid'
+    #labels[5] = '"End queue\nrun: pid="'
+    #labels[6] = 'pid'
+    #labels[8] = 'id'
+    #labels[12] = 'name'
+    #labels[14] = 'mail'
+    #labels[19] = 'R'
+    #labels[23] = 'mail'
+    #labels[25] = 'U'
+    #labels[27] = 'S'
+    #labels[31] = 'id'
+    # END EXIM
+
+    labels[1] = 'root'
+    labels[4] = '"USER_AUTH\nmsg=audit("'
+    labels[14] = '" msg=\\\\\\\'op=PAM:\nauthentication acct="'
+    labels[16] = '" exe="/usr/lib/\ndovecot/auth"\nhostname="'
+    labels[20] = '" terminal=dovecot\nres=success\\\\\\\'"'
+    labels[22] = '"USER_ACCT\nmsg=audit("'
+    labels[32] = '" msg=\\\\\\\'op=PAM:\naccounting acct="'
+    labels[34] = '" exe="/usr/lib/\ndovecot/auth"\nhostname="'
+    labels[38] = '" terminal=dovecot\nres=success\\\\\\\'"'
+    labels[40] = '"PROCTITLE\nmsg=audit("'
+    labels[45] = '"SOCKADDR\nmsg=audit("'
+    labels[50] = '"SYSCALL\nmsg=audit("'
+    labels[52] = '"): arch=c000003e\nsyscall="'
+    labels[90] = '" tty=(none)\nses="'
+    labels[98] = '"EXECVE\nmsg=audit("'
+    labels[108] = '"PATH\nmsg=audit("'
+
+    plt.figure(1,figsize=(12,18)) 
+    nx.draw(G, pos=pos, node_color=colors, labels=labels, node_size=400, font_size=12, width=0.5, arrowsize=5, with_labels=True)
     # A = to_agraph(G)
     # A.layout('dot')
     # A.draw(PGConfig.visualization_file)

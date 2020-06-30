@@ -947,17 +947,17 @@ class Node:
         
         # Always do a variable if all branches are unique, i.e., max_count == 1
         # Also, never do a variable for delimiters
-        #print(counter)
-        #print(len(log_line_dict))
+        print(counter)
+        print(len(log_line_dict))
         #print('a')
-        #print(list1)
+        print(list1)
         #print(delimiter_flag)
         #print(special_datatype)
         #print(depth)
         #print(force_var)
-        #print(sum_frequency)
+        print(sum_frequency)
         if not delimiter_flag and (len(list1) == 0 or special_datatype or depth in force_var):
-            #print('c1')
+            print('c1')
             # Case 1
             new_node.element = '§'
             new_node.is_variable = True
@@ -991,7 +991,7 @@ class Node:
         elif len(list1) == 1:
             # Case 2
             if counter[list1[0]] / float(len(log_line_dict)) >= theta2 or delimiter_flag == True:
-                #print('c2a')
+                print('c2a')
                 # Case 2 a)
                 new_node.element = list1[0]
                 new_node.parent = self
@@ -1056,7 +1056,7 @@ class Node:
                     new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
                                         force_branch, force_var)
             else:
-                #print('c2b')
+                print('c2b')
                 # Case 2 b)
                 new_node.element = '§'
                 new_node.is_variable = True
@@ -1085,7 +1085,7 @@ class Node:
         elif len(list1) > 1:
             # Case 3
             if sum_frequency / float(len(log_line_dict)) > theta3 or delimiter_flag:
-                #print('c3a')
+                print('c3a')
                 # Case 3 a)
                 for element in list1:
                     new_node = Node(self.optional_node_pairs, self.merge_tuple)
@@ -1149,7 +1149,7 @@ class Node:
                     new_node.build_tree(depth + 1, new_dict, delimiters, new_node.theta1, theta2, theta3, theta4, theta5, theta6, damping,
                                         force_branch, force_var)
             else:
-                #print('c3b')
+                print('c3b')
                 # Case 3 b)
                 new_node.element = '§'
                 new_node.is_variable = True
