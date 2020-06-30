@@ -224,8 +224,8 @@ class AECIDpgTest(unittest.TestCase):
     #        "sub_tree0,FixedDataModelElement('fixed11',b'.')],SequenceModelElement('sequence12',["
     #        "FixedDataModelElement('fixed12',b'Another '),sub_tree0,FixedDataModelElement('fixed13',b' log.')])]", generated_model)
 
-    def test4reverse_lexographic_ordering(self):
-        """This test case tests the reverse lexographic ordering of models."""
+    def test4reverse_lexicographic_ordering(self):
+        """This test case tests the reverse lexicographic ordering of models."""
         log_lines = [b'a a a', b'a aaa aaa', b'a aa aa']
         with open(self.log_file_name, 'wb') as f:
             for log in log_lines:
