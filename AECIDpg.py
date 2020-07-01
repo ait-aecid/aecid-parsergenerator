@@ -18,13 +18,13 @@ __authors__ = ["Markus Wurzenberger", "Max Landauer", "Wolfgang Hotwagner",
 __contact__ = "aecid@ait.ac.at"
 __copyright__ = "Copyright 2020, AIT Austrian Institute of Technology GmbH"
 __credits__ = ["Florian Skopik"]
-__date__ = "2020/06/26"
+__date__ = "2020/07/01"
 __deprecated__ = False
 __email__ = "aecid@ait.ac.at"
 __license__ = "GPLv3"
 __maintainer__ = "Markus Wurzenberger"
 __status__ = "Production"
-__version__ = "0.0.1"
+__version__ = "1.0.0"
 
 from source import LogLine, Node, GlobalID
 import PGConfig
