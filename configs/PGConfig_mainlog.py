@@ -27,5 +27,5 @@ delimiters = [' ', '=', '<', '>'] # Delimiters for tokenizing log lines [list of
 force_branch = [] # Parser tree depths where all branches are generated for all tokens, starts with 0 and also counts delimiters [list of integers]
 force_var = [] # Parser tree depths where all tokens are merged to variable, starts with 0 and also counts delimiters [list of integers]
 element_list_similarity = 0.66  # Minimum similarity for to lists to be merged [0, 1]
-visualize = True # Produce graphical visualization [True, False]
+visualize = False # Produce graphical visualization [True, False]
 visualization_file = 'data/out/visualization.pdf' # Path to visualization, [*.png, *.pdf]
