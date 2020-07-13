@@ -29,3 +29,4 @@ force_var = [] # Parser tree depths where all tokens are merged to variable, sta
 element_list_similarity = 0.66 # Minimum similarity for to lists to be merged [0, 1]
 visualize = False # Produce graphical visualization [True, False]
 visualization_file = 'data/out/visualization.png' # Path to visualization, [*.png, *.pdf]
+figsize = (12, 18) # Tuple (width, height)

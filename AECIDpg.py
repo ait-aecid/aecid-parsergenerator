@@ -283,6 +283,6 @@ if PGConfig.visualize is True:
 
     pos = graphviz_layout(G, prog='dot')
 
-    plt.figure(1,figsize=(12,18)) 
+    plt.figure(1,figsize=PGConfig.figsize) 
     nx.draw(G, pos=pos, node_color=colors, labels=labels, node_size=400, font_size=12, width=0.5, arrowsize=5, with_labels=True)
     plt.savefig(PGConfig.visualization_file, dpi=300)

@@ -28,4 +28,5 @@ force_branch = [] # Parser tree depths where all branches are generated for all 
 force_var = [] # Parser tree depths where all tokens are merged to variable, starts with 0 and also counts delimiters [list of integers]
 element_list_similarity = 0.66  # Minimum similarity for to lists to be merged [0, 1]
 visualize = False # Produce graphical visualization [True, False]
-visualization_file = 'data/out/visualization.pdf' # Path to visualization, [*.png, *.pdf]
+visualization_file = 'data/out/visualization.png' # Path to visualization, [*.png, *.pdf]
+figsize = (8, 6) # Tuple (width, height)
