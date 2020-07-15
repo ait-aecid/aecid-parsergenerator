@@ -26,6 +26,4 @@ cat data/out/tree.txt
 or open data/out/visualization.png.
 
 More information on the aecid-parsergenerator is provided in the following paper: 
-Wurzenberger M., Landauer M., Skopik F., Kastner W. (2019): AECID-PG: A Tree-Based Log Parser Generator To Enable Log Analysis.
-4th IEEE/IFIP International Workshop on Analytics for Network and Service Management (AnNet 2019) in conjunction with the IFIP/IEEE International Symposium on Integrated Network Management (IM), April 8, 2019, Washington D.C., USA. IEEE.
-Link to PDF: https://www.skopik.at/ait/2019_annet.pdf
+Wurzenberger M., Landauer M., Skopik F., Kastner W. (2019): AECID-PG: [AECID-PG: A Tree-Based Log Parser Generator To Enable Log Analysis](https://ieeexplore.ieee.org/document/8717887). [4th IEEE/IFIP International Workshop on Analytics for Network and Service Management (AnNet 2019)](https://annet2019.moogsoft.com/) in conjunction with the [IFIP/IEEE International Symposium on Integrated Network Management (IM)](https://im2019.ieee-im.org/), April 8, 2019, Washington D.C., USA. IEEE. \[[PDF](https://www.markuswurzenberger.com/wp-content/uploads/2020/05/2019_annet.pdf)\]
