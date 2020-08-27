@@ -1,4 +1,4 @@
-# aecid-parsergenerator
+# aecid-parsergenerator [![Build Status](https://travis-ci.org/ait-aecid/aecid-parsergenerator.svg?branch=master)](https://travis-ci.org/ait-aecid/aecid-parsergenerator)
 Automatically create parser trees for textual logdata to facilitate analysis
 
 To get started, just clone this repository and execute
