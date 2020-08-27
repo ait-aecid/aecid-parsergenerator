@@ -1,0 +1,10 @@
+language: python
+python:
+  - '3.7' 
+dist: bionic
+
+install:
+        - pip3 install python-dateutil
+
+script:
+        - python3 -m unittest discover unit "*.py"
