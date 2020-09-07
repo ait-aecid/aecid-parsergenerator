@@ -1,5 +1,10 @@
 # aecid-parsergenerator [![Build Status](https://travis-ci.org/ait-aecid/aecid-parsergenerator.svg?branch=master)](https://travis-ci.org/ait-aecid/aecid-parsergenerator)
-Automatically create parser trees for textual logdata to facilitate analysis
+Automatically create parser trees for textual logdata to facilitate analysis.
+
+Please install python-dateutil before continuing. The aecid-parsergenerator was tested with python-dateutil 2.8.1, but should work with other versions as well.
+```
+pip3 install python-dateutil
+```
 
 To get started, just clone this repository and execute
 ```
