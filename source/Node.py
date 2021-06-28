@@ -40,10 +40,10 @@ class Node:
         self.optional_node_pairs = optional_node_pairs  # List of the First and the last
         self.merge_tuple = merge_tuple  # List of nodes, which are inserted into the branch after the matching has happened
 
-    # This method makes a deep copy of 
+    # This method makes a deep copy of all node from self to end node and all branching nodes. It returns the new self node and new end node
     def deep_copy(self, end_node):
-        new_end_node = None
         new_node = Node(self.optional_node_pairs, self.merge_tuple)
+        new_end_node = None
 
         if self.is_list:
             new_node.element = []
@@ -710,7 +710,7 @@ class Node:
         element_list_1 = self.get_elements([0], delimiters)
         element_list_2 = node.get_elements([1], delimiters)
 
-        # Match the entries with appear once in both trees
+        # Match the entries which appear once in both trees
         element_list = {}
         for key in element_list_1:
             if key in element_list_2 and len(element_list_1[key]) == 1 and len(element_list_2[key]) == 1:
@@ -754,7 +754,7 @@ class Node:
 
         # Add the elements of the following nodes to the element_list
         for i in range(len(self.children)):
-            element_list_2 = self.children[i].get_elements(previous_path+[i], delimiters)
+            element_list_2 = self.children[i].get_elements(previous_path + [i], delimiters)
             for key in element_list_2:
                 if key in element_list:
                     element_list[key] += element_list_2[key]
@@ -988,12 +988,12 @@ class Node:
             self.merge_subtrees(node)
 
         else: # matches != []
-            [next_matches, next_Subtrees] = self.next_matches(matches, pos_0, pos_1)
+            [next_matches, next_subtrees] = self.next_matches(matches, pos_0, pos_1)
 
             for i in range(len(next_matches)):
                 self.merge_to_single_path(node, next_matches[i], next_matches, pos_0, pos_1)
                 self.follow_path(next_matches[i][0][len(pos_0):]).merge_subtree_matches(
-                        node.follow_path(next_matches[i][1][len(pos_1):]), next_Subtrees[i], next_matches[i][0], next_matches[i][1],
+                        node.follow_path(next_matches[i][1][len(pos_1):]), next_subtrees[i], next_matches[i][0], next_matches[i][1],
                         first_merge = False)
 
             if first_merge:
@@ -1062,16 +1062,16 @@ class Node:
             del matches[0]
 
         next_matches = [matches[0]] # Next matches
-        next_Subtrees = [[]] # List of the subtrees of the nodes to the next matches
+        next_subtrees = [[]] # List of the subtrees of the nodes to the next matches
 
         for i in range(1,len(matches)):
             if next_matches[-1][0] != matches[i][0][:len(next_matches[-1][0])]:
                 next_matches.append(matches[i])
-                next_Subtrees.append([])
+                next_subtrees.append([])
             else:
-                next_Subtrees[-1].append(matches[i])
+                next_subtrees[-1].append(matches[i])
 
-        return [next_matches, next_Subtrees]
+        return [next_matches, next_subtrees]
 
     # This method returns the successor node, which is reached after following the path
     def follow_path(self, path):
@@ -1088,7 +1088,7 @@ class Node:
 
         # Add not matched branch children of node to self
         for i in range(len(node.children)):
-            if not any(pos_1+[i] == pos[1][:len(pos_1)+1] for pos in next_matches) and node.children[i] not in self.children:
+            if not any(pos_1 + [i] == pos[1][:len(pos_1) + 1] for pos in next_matches) and node.children[i] not in self.children:
                 if node.children[i].is_variable:
                     contains_variable = False
                     for child in self.children:
@@ -1108,15 +1108,15 @@ class Node:
         tmp_node = node
 
         for i in range(min(len(pair[0])-len(pos_0), len(pair[1])-len(pos_1))-1):
-            tmp_self = tmp_self.follow_path([pair[0][len(pos_0)+i]])
-            tmp_node = tmp_node.follow_path([pair[1][len(pos_1)+i]])
+            tmp_self = tmp_self.follow_path([pair[0][len(pos_0) + i]])
+            tmp_node = tmp_node.follow_path([pair[1][len(pos_1) + i]])
 
             # Merge the nodes because they lie on the matched path
             tmp_self.merge_node(tmp_node)
 
             # Add not matched branch children
             for j in range(len(tmp_node.children)):
-                if not any(pair[1][:len(pos_1)+i+1]+[j] == tmp_pos[1][:len(pos_1)+i+2] for tmp_pos in next_matches) and \
+                if not any(pair[1][:len(pos_1) + i + 1] + [j] == tmp_pos[1][:len(pos_1) + i + 2] for tmp_pos in next_matches) and \
                         tmp_node.children[j] not in tmp_self.children:
 
                     if tmp_node.children[j].is_variable:
@@ -1182,7 +1182,7 @@ class Node:
                     self.optional_node_pairs[i][1] = self
 
     # This function finds subtrees in the parser and return the IDs of the root nodes
-    # Parseretrees with multiple parents are not supported (Remove matched_subtree_indices + Save number of includions in subtrees)
+    # Parsertrees with multiple parents are not supported (Remove matched_subtree_indices + Save number of inclusions in subtrees)
     def get_subtrees(self, min_height):
         subtree_list = [node for node in self.get_leaves()]
         tmp_dict = {}
@@ -1242,7 +1242,7 @@ class Node:
                         indices_list = [] # List of the indices, which are used to remove the other matched subtrees
                         parents_list = [subtree_list[i][j].parent] # List of the parents of matched subtrees
 
-                        for j_2 in range(j+1, len(subtree_list[i])):
+                        for j_2 in range(j + 1, len(subtree_list[i])):
                             # Check if the subtree has already been matched
                             if j_2 in matched_subtree_indices:
                                 continue
@@ -1313,7 +1313,7 @@ class Node:
                 if len(subtree_list[k]) < 2 or k < height_list[min_height]:
                     del subtree_list[k]
         else:
-            # No Subtree has the minimum height
+            # No subtree has the minimum height
             subtree_list = []
 
         # Add the subtrees for the optional elements
