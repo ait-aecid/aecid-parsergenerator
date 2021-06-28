@@ -186,43 +186,23 @@ class AECIDpgTest(unittest.TestCase):
             "b'== '),VariableByteDataModelElement('string19',alphabet),FixedDataModelElement('fixed20',b' '),"
             "IpAddressDataModelElement('ipaddress21')])])", generated_model)
 
-    #def test3sub_trees(self):
-    #    """This unittest checks the functionality of the sub_tree generation."""
-    #    log_lines = []
-    #    i_str = b'0'
-    #    log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' started.')
-    #    log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' stopped.')
-    #    log_lines.append(b'Log line for cron[' + i_str + b'].')
-    #    log_lines.append(b'Another ' + b'cron[' + i_str + b'] log.')
-    #    for i in range(1000):
-    #        i_str = str(i).encode()
-    #        r = random.randint(0, 3)
-    #        if r == 0:
-    #            log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' started.')
-    #        elif r == 1:
-    #            log_lines.append(b'cron[' + i_str + b']: Cron job ' + i_str + b' stopped.')
-    #        elif r == 2:
-    #            log_lines.append(b'Log line for cron[' + i_str + b'].')
-    #        else:
-    #            log_lines.append(b'Another ' + b'cron[' + i_str + b'] log.')
-    #    with open(self.log_file_name, 'wb') as f:
-    #        for log in log_lines:
-    #            f.write(log)
-    #            f.write(b'\n')
-    #    import AECIDpg
-    #    importlib.reload(AECIDpg)
-    #    generated_model = self.read_sub_trees_and_model()
-    #    generated_model = generated_model.replace(', ', ',')
-    #    self.assertEqual(
-    #        "sub_tree0 = SequenceModelElement('sequence0',[FixedDataModelElement('fixed1',b'cron['),"
-    #        "DecimalIntegerValueModelElement(integer2,value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL),"
-    #        "FixedDataModelElement('fixed3',b']')]"
-    #        "model = FirstMatchModelElement('firstmatch4',[SequenceModelElement('sequence5',[sub_tree0,"
-    #        "FixedDataModelElement('fixed6',b': Cron job '),DecimalIntegerValueModelElement(integer7,"
-    #        "value_sign_type=DecimalIntegerValueModelElement.SIGN_TYPE_OPTIONAL), FixedWordlistDataModelElement('fixed8',"
-    #        "[b' stopped', b' started'])], SequenceModelElement('sequence9',[FixedDataModelElement('fixed10',b'Log line for '),"
-    #        "sub_tree0,FixedDataModelElement('fixed11',b'.')],SequenceModelElement('sequence12',["
-    #        "FixedDataModelElement('fixed12',b'Another '),sub_tree0,FixedDataModelElement('fixed13',b' log.')])]", generated_model)
+    def test3subtrees(self):
+        """This unittest checks the functionality of the subtree generation."""
+        log_lines = [b'a subtree a a', b'a subtree b b', b'a subtree c c', b'a a subtree a a', b'a a subtree b b', b'a a subtree c c']
+        with open(self.log_file_name, 'wb') as f:
+            for log in log_lines:
+                f.write(log)
+                f.write(b'\n')
+        import AECIDpg
+        importlib.reload(AECIDpg)
+        generated_model = self.read_subtrees_and_model()
+        generated_model = generated_model.replace(', ', ',')
+        self.assertEqual(
+            "subtree_0 = SequenceModelElement('sequence-1',[FixedDataModelElement('fixed0',b'subtree '),FirstMatchModelElement("
+            "'firstmatch1',[FixedDataModelElement('fixed2',b'c c'),FixedDataModelElement('fixed3',b'b b'),FixedDataModelElement("
+            "'fixed4',b'a a')])])model = SequenceModelElement('sequence5',[FixedDataModelElement('fixed6',b'a '),FirstMatchModelElement("
+            "'firstmatch7',[SequenceModelElement('sequence8',[subtree_0]),SequenceModelElement('sequence9',[FixedDataModelElement("
+            "'fixed10',b'a '),subtree_0])])])", generated_model)
 
     def test4reverse_lexicographic_ordering(self):
         """This test case tests the reverse lexicographic ordering of models."""
@@ -241,12 +221,12 @@ class AECIDpgTest(unittest.TestCase):
                          "FixedDataModelElement('fixed4', b'aa aa'),"
                          "FixedDataModelElement('fixed5', b'a a')])])", generated_model)
 
-    def read_sub_trees_and_model(self):
+    def read_subtrees_and_model(self):
         generated_model = ''
         with open(self.generated_model_file_name) as f:
             found = False
             for line in f.readlines():
-                if 'sub_tree' in line:
+                if 'subtree_' in line:
                     found = True
                 elif 'return model' in line:
                     found = False

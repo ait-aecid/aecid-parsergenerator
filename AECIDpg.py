@@ -148,6 +148,9 @@ root.sort_children()
 print('Refine tree by aggregating similar paths')
 root.insert_variables(PGConfig.merge_similarity, delimiters, 0, PGConfig.force_branch)
 
+if PGConfig.merge_branches:
+    root.merge_similar_branches(delimiters, PGConfig.merge_subtrees_min_similarity)
+
 # Create lists instead of branches if following paths are equal
 print('Replace equal branches with lists')
 root.insert_lists()
@@ -156,13 +159,20 @@ root.insert_lists()
 print('Match list elements')
 root.match_lists(PGConfig.element_list_similarity)
 
+if PGConfig.find_subtrees:
+    # Get a list which includes the nodes of common subtrees
+    print('Generate the list of subtrees')
+    subtree_list = root.get_subtrees(PGConfig.subtree_min_height)
+else:
+    subtree_list = []
+
 # Sort fixed elements after branches because the AMiner takes the wrong path if elements are subsets of each other
 print('Sort branches')
 root.sort_children()
 
 # Reduce tree complexity by grouping subsequent fixed nodes into single nodes
 print('Aggregate fixed word elements')
-root.aggregate_sequences()
+root.aggregate_sequences(subtree_list)
 
 # Print Tree in textual form using Depth First Search
 print('Store tree')
@@ -220,7 +230,9 @@ config += 'from aminer.parsing.VariableByteDataModelElement import VariableByteD
 config += '\n'
 config += 'def get_model():\n'
 config += '\talphabet = b\'' + alphabet + '\'\n'
-config += '\tmodel = ' + root.write_config(1, ID)[1:-2] + '\n\n'
+# Add the subtrees to the config
+config += root.write_config_subtrees(ID, subtree_list)
+config += '\tmodel = ' + root.write_config(1, ID, subtree_list)[1:-2] + '\n\n'
 # [1:-2] removes newline and comma following last ModelElement and tabulator preceding first ModelElement
 config += '\treturn model'
 
