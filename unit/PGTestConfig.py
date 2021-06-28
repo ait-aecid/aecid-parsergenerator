@@ -14,6 +14,8 @@ merge_similarity = 1.1
 delimiters = [' ', '=']
 force_branch = []
 force_var = []
+merge_branches = False # Merge similar branches to one branch
+find_subtrees = True # Find and merge subtrees
 # Threshold for the similarity of the subtrees. If the calculated similarity exceeds the threshold, the subtrees are merged
 merge_subtrees_min_similarity = 0.45
 subtree_min_height = 1  # Number of the minimal height of the found subtrees. Mind the delimiters!
