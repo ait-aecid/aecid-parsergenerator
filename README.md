@@ -28,7 +28,7 @@ cat data/out/GeneratedParserModel.py
 cat data/out/logTemplates.txt
 cat data/out/tree.txt
 ```
-or open data/out/visualization.png.
+or open data/out/visualization.png (note that visualization requires `sudo apt-get install -y python3-pygraphviz` and `pip install pygraphviz`, and needs to be activated by setting `visualize = True` in the configuration).
 
 More information on the aecid-parsergenerator is provided in the following paper: 
 
