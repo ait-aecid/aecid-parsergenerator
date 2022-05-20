@@ -14,7 +14,7 @@ to run the aecid-parsergenerator with the default input file and configurations.
 
 There are two sample configurations for Exim Mainlog and Audit logs. Just copy either of the configurations by
 ```
-cp configs/PGConfig_exim.py PGConfig.py
+cp configs/PGConfig_mainlog.py PGConfig.py
 ```
 or
 ```
